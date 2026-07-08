@@ -14,7 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(health_router)
-app.include_router(health_router, prefix=settings.api_prefix)
 
 
 @app.get("/")
@@ -23,4 +22,5 @@ def read_root() -> dict[str, str]:
         "name": settings.app_name,
         "docs": "/docs",
         "health": "/health",
+        "api_prefix": settings.api_prefix,
     }

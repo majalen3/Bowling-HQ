@@ -10,10 +10,11 @@ def test_root_returns_service_metadata() -> None:
 
     assert response.status_code == 200
     assert response.json()["name"] == "Bowling-HQ API"
+    assert response.json()["api_prefix"] == "/api/v1"
 
 
-def test_api_health_endpoint_returns_ok() -> None:
-    response = client.get("/api/v1/health")
+def test_health_endpoint_returns_ok() -> None:
+    response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
