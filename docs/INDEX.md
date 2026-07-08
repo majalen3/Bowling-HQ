@@ -41,6 +41,18 @@ Complete reference for all Bowling-HQ documentation.
 - **[API_SPECIFICATION.md](API_SPECIFICATION.md)** - API endpoints and examples
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Development guidelines
 
+## 🎳 Bowling Physics Expert Deliverables
+
+- **[BOWLING_PHYSICS_GUIDE.md](BOWLING_PHYSICS_GUIDE.md)** - Shared physics model
+- **[OIL_PATTERN_ANALYSIS.md](OIL_PATTERN_ANALYSIS.md)** - Pattern variables and difficulty
+- **[BALL_REACTION_GUIDE.md](BALL_REACTION_GUIDE.md)** - Ball motion and fit rules
+- **[BIOMECHANICS_ANALYSIS.md](BIOMECHANICS_ANALYSIS.md)** - Release metrics and bowler inputs
+- **[DATA_NEEDS_PHASE_1.md](DATA_NEEDS_PHASE_1.md)** - Immediate collection plan
+- **[DATA_NEEDS_FUTURE.md](DATA_NEEDS_FUTURE.md)** - Later-phase data roadmap
+- **[MEASUREMENT_STANDARDS.md](MEASUREMENT_STANDARDS.md)** - Capture standards
+- **[DATA_VALIDATION_RULES.md](DATA_VALIDATION_RULES.md)** - Guardrails for engine inputs
+- **[PHYSICS_INTEGRATION_SPECS.md](PHYSICS_INTEGRATION_SPECS.md)** - Commander / Ghost / Twin / Maxwell contracts
+
 ---
 
 ## 🤖 Operations & Coordination
