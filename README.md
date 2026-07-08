@@ -30,6 +30,8 @@
 - **[Documentation Index](docs/INDEX.md)** - Full reference
 - **[Phase 0 Roadmap](ROADMAP_PHASE_0.md)** - Development phases
 - **[Architecture](architecture/SYSTEM_DESIGN.md)** - System design
+- **[Bowling Physics Guide](docs/BOWLING_PHYSICS_GUIDE.md)** - Physics and prediction baseline
+- **[Data Needs Phase 1](docs/DATA_NEEDS_PHASE_1.md)** - Immediate collection priorities
 
 ## 📊 What is Bowling HQ?
 
@@ -113,6 +115,17 @@ Bowling-HQ/
 - ✅ Conclusion & Success Paths
 
 **Next Phases**: Backend, Frontend, Database implementation
+
+## 🎳 Physics & Prediction Foundations
+
+The repository now includes a first-pass bowling physics baseline for:
+- oil pattern difficulty scoring
+- ball reaction prediction
+- bowler outcome forecasting
+- pattern transition modeling
+- Monte Carlo scenario simulation
+
+See `/home/runner/work/Bowling-HQ/Bowling-HQ/backend/services/physics_engine.py` and the related docs in `docs/`.
 
 ## 🤝 Contributing
 

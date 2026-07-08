@@ -13,6 +13,7 @@ backend/
 ├── services/           → Business logic (engines)
 │   ├── commander_engine.py
 │   ├── ghost_engine.py
+│   ├── physics_engine.py
 │   ├── pattern_engine.py
 │   ├── maxwell_engine.py
 │   └── session_engine.py
@@ -34,6 +35,7 @@ backend/
 └── tests/              → Unit and integration tests
     ├── test_commander.py
     ├── test_ghost_bowler.py
+    ├── test_physics_engine.py
     └── test_patterns.py
 ```
 
@@ -56,6 +58,15 @@ uvicorn main:app --reload
 - **ASGI Server**: Uvicorn
 - **Database**: PostgreSQL, MongoDB, Redis
 - **Language**: Python 3.11+
+
+## Current Physics Baseline
+
+The repository includes `/home/runner/work/Bowling-HQ/Bowling-HQ/backend/services/physics_engine.py`, a dependency-free baseline for:
+- oil pattern difficulty scoring
+- ball-path prediction
+- pin-action estimation
+- condition evolution
+- Monte Carlo scenario simulation
 
 ## Development
 
