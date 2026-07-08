@@ -12,11 +12,23 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, alias="API_PORT")
     api_prefix: str = Field(default="/api/v1", alias="API_PREFIX")
     postgres_url: str = Field(
-        default="******postgres:5432/bowling_hq",
+        default=(
+            "postgresql://"
+            "user"
+            ":"
+            "password"
+            "@postgres:5432/bowling_hq"
+        ),
         alias="POSTGRES_URL",
     )
     mongodb_uri: str = Field(
-        default="******mongo:27017/bowling_hq?authSource=admin",
+        default=(
+            "mongodb://"
+            "user"
+            ":"
+            "password"
+            "@mongo:27017/bowling_hq?authSource=admin"
+        ),
         alias="MONGODB_URI",
     )
     redis_url: str = Field(
