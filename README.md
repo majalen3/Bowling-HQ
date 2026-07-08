@@ -125,7 +125,7 @@ The repository now includes a first-pass bowling physics baseline for:
 - pattern transition modeling
 - Monte Carlo scenario simulation
 
-See `/home/runner/work/Bowling-HQ/Bowling-HQ/backend/services/physics_engine.py` and the related docs in `docs/`.
+See `backend/services/physics_engine.py` and the related docs in `docs/`.
 
 ## 🤝 Contributing
 

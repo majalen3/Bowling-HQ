@@ -61,7 +61,7 @@ uvicorn main:app --reload
 
 ## Current Physics Baseline
 
-The repository includes `/home/runner/work/Bowling-HQ/Bowling-HQ/backend/services/physics_engine.py`, a dependency-free baseline for:
+The repository includes `backend/services/physics_engine.py`, a dependency-free baseline for:
 - oil pattern difficulty scoring
 - ball-path prediction
 - pin-action estimation
