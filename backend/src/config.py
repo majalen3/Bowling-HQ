@@ -1,10 +1,14 @@
+from typing import ClassVar
+
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    default_secret_key: ClassVar[str] = "change-me-in-production"
+
     app_name: str = Field(default="Bowling-HQ API", alias="APP_NAME")
     environment: str = Field(default="development", alias="ENVIRONMENT")
     debug: bool = Field(default=True, alias="DEBUG")
@@ -36,7 +40,7 @@ class Settings(BaseSettings):
         alias="REDIS_URL",
     )
     secret_key: str = Field(
-        default="change-me-in-production",
+        default=default_secret_key,
         alias="SECRET_KEY",
     )
     cors_origins: str = Field(
@@ -58,6 +62,17 @@ class Settings(BaseSettings):
             for origin in self.cors_origins.split(",")
             if origin.strip()
         ]
+
+    @model_validator(mode="after")
+    def validate_secret_key(self) -> "Settings":
+        if (
+            self.environment.lower() != "development"
+            and self.secret_key == self.default_secret_key
+        ):
+            raise ValueError(
+                "SECRET_KEY must be overridden outside development"
+            )
+        return self
 
 
 @lru_cache
