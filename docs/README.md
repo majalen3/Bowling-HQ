@@ -33,6 +33,14 @@ This directory contains all Bowling-HQ documentation, split from the original RE
 - `API_SPECIFICATION.md` - API endpoints and examples
 - `CONTRIBUTING.md` - Development guidelines
 
+### Operations & Coordination
+- `ADMIN_ORCHESTRATION.md` - Admin agent mission, decision loop, and escalation rules
+- `ADMIN_STATUS.md` - Live orchestration snapshot and dependency tracker
+- `LEARNING_LOG.md` - Phase-by-phase lessons and iteration history
+- `DECISIONS_LOG.md` - Decision audit trail with reasoning
+- `AGENT_PERFORMANCE.md` - Agent scoring and estimate accuracy
+- `LESSONS_LEARNED.md` - Reusable patterns and cautions
+
 ## Organization
 
 Each document is self-contained but linked to related sections.

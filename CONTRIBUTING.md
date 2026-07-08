@@ -1,39 +1,39 @@
-# Contributing to Bowling HQ
+# Contributing to Bowling-HQ
 
-Thanks for your interest! This is a personal project, but feedback and ideas are welcome.
+Thanks for your interest in improving Bowling-HQ.
 
-## For Personal Use
+## Local development workflow
 
-This project is primarily for personal documentation and learning. The code and documentation represent a comprehensive platform design for AI-powered bowling analytics.
+1. Copy the environment templates and install dependencies:
 
-## Sharing Ideas
+   ```bash
+   make setup
+   ```
 
-If you have feedback or ideas:
-1. Open an issue describing your suggestion
-2. Include context and examples
-3. Reference relevant documentation sections
+2. Start the full local stack:
 
-## Code of Conduct
+   ```bash
+   make dev
+   ```
 
-- Be respectful and constructive
-- Focus on ideas, not criticism
-- Help others learn and improve
+3. Run quality checks before opening a pull request:
 
-## Project Structure
+   ```bash
+   make lint
+   make test
+   make build
+   ```
 
-- `docs/` - Complete platform documentation
-- `architecture/` - System design files
-- `backend/` - Backend code (when implemented)
-- `frontend/` - Frontend code (when implemented)
+## Repository structure
 
-## Documentation
+- `backend/` - FastAPI application source, configuration, and backend tests
+- `frontend/` - React + TypeScript application source and frontend tests
+- `database/` - Local PostgreSQL and MongoDB schema plus seed assets
+- `docs/` - Product and feature documentation
+- `architecture/` - Architecture notes and system design
 
-All platform features are documented in `/docs/`. See [docs/INDEX.md](docs/INDEX.md) for the full reference.
+## Pull requests
 
-## Questions?
-
-Check the documentation first, then consider opening an issue with your question.
-
----
-
-**This is a personal project. Major changes may not be merged, but ideas and feedback are always appreciated.**
+- Keep changes focused and small.
+- Avoid committing secrets or local `.env` files.
+- Update the relevant documentation when development workflows change.

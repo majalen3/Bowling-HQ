@@ -163,7 +163,13 @@ def estimate_friction(pattern: OilPattern, ball: BallSpec, environment: Environm
     temperature_factor = (environment.temperature_f - 70) / 80
     lane_age_factor = min(environment.lane_age_years, 20) / 500
     return _clamp(
-        cover_friction + grit_factor + surface_factor - oil_factor - humidity_factor + temperature_factor + lane_age_factor,
+        cover_friction
+        + grit_factor
+        + surface_factor
+        - oil_factor
+        - humidity_factor
+        + temperature_factor
+        + lane_age_factor,
         0.12,
         0.95,
     )
@@ -438,7 +444,11 @@ def simulate_scenario(
     rng = Random(seed)
     scores = []
     frame_base = outcome.expected_score / 10
-    variance = max(2.0, (1 - bowler.consistency) * 6 + calculate_pattern_difficulty(pattern).score / 4)
+    variance = max(
+        2.0,
+        (1 - bowler.consistency) * 6
+        + calculate_pattern_difficulty(pattern).score / 4,
+    )
     for _ in range(trials):
         total = 0.0
         for _frame in range(games * 10):
@@ -465,8 +475,18 @@ def sensitivity_analysis(
 ) -> dict[str, float]:
     environment = environment or Environment()
     baseline = predict_ball_path(pattern, ball, bowler, environment)
-    faster = predict_ball_path(pattern, ball, replace(bowler, speed_mph=bowler.speed_mph + 1), environment)
-    more_revs = predict_ball_path(pattern, ball, replace(bowler, rev_rate=bowler.rev_rate + 40), environment)
+    faster = predict_ball_path(
+        pattern,
+        ball,
+        replace(bowler, speed_mph=bowler.speed_mph + 1),
+        environment,
+    )
+    more_revs = predict_ball_path(
+        pattern,
+        ball,
+        replace(bowler, rev_rate=bowler.rev_rate + 40),
+        environment,
+    )
     more_rotation = predict_ball_path(
         pattern,
         ball,
@@ -474,9 +494,20 @@ def sensitivity_analysis(
         environment,
     )
     return {
-        "speed_plus_1mph_entry_angle_delta": round(faster.entry_angle_deg - baseline.entry_angle_deg, 2),
-        "speed_plus_1mph_breakpoint_delta": round(faster.breakpoint_board - baseline.breakpoint_board, 2),
-        "revs_plus_40_breakpoint_delta": round(more_revs.breakpoint_board - baseline.breakpoint_board, 2),
-        "rotation_plus_10deg_entry_angle_delta": round(more_rotation.entry_angle_deg - baseline.entry_angle_deg, 2),
+        "speed_plus_1mph_entry_angle_delta": round(
+            faster.entry_angle_deg - baseline.entry_angle_deg,
+            2,
+        ),
+        "speed_plus_1mph_breakpoint_delta": round(
+            faster.breakpoint_board - baseline.breakpoint_board,
+            2,
+        ),
+        "revs_plus_40_breakpoint_delta": round(
+            more_revs.breakpoint_board - baseline.breakpoint_board,
+            2,
+        ),
+        "rotation_plus_10deg_entry_angle_delta": round(
+            more_rotation.entry_angle_deg - baseline.entry_angle_deg,
+            2,
+        ),
     }
-

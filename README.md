@@ -1,6 +1,6 @@
-# Bowling HQ - Complete Platform Documentation
+# Bowling-HQ
 
-**Bowling HQ** is an AI-powered bowling intelligence platform designed to help bowlers of all levels improve their game through data-driven analysis, personalized coaching, and strategic planning.
+Bowling-HQ is an AI-powered bowling intelligence platform with production-ready local development scaffolding for FastAPI, React, PostgreSQL, MongoDB, and Redis.
 
 ## 🎯 Quick Navigation
 
@@ -32,8 +32,28 @@
 - **[Architecture](architecture/SYSTEM_DESIGN.md)** - System design
 - **[Bowling Physics Guide](docs/BOWLING_PHYSICS_GUIDE.md)** - Physics and prediction baseline
 - **[Data Needs Phase 1](docs/DATA_NEEDS_PHASE_1.md)** - Immediate collection priorities
+- **[Development Workflow](DEVELOPMENT.md)** - Local stack and command reference
 
-## 📊 What is Bowling HQ?
+## Quick start
+
+```bash
+make setup
+make dev
+```
+
+Or start the full stack directly with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- Backend health: http://localhost:8000/health
+
+## 📊 What is Bowling-HQ?
 
 A comprehensive platform that provides:
 
@@ -67,41 +87,42 @@ A comprehensive platform that provides:
 - **Personalized Paths**: Customized learning progression
 - **Expert Instruction**: Professional bowlers and coaches
 
-## 📈 Impact
+## Project structure
 
-Users typically see:
-- **+15-30 pins average improvement** in first 3 months
-- **90%+ tournament prediction accuracy**
-- **Significantly better equipment decisions**
-- **Measurable form improvements**
-- **Increased bowling enjoyment and engagement**
-
-## 🏗️ Project Structure
-
-```
+```text
 Bowling-HQ/
-├── docs/                    # Complete documentation (14 sections)
-├── architecture/            # System design
-├── examples/               # Usage examples
-├── backend/                # Backend implementation (future)
-├── frontend/               # Frontend implementation (future)
-├── database/               # Database schemas (future)
-├── README.md               # This file
-├── ROADMAP_PHASE_0.md     # Development roadmap
-├── CONTRIBUTING.md         # Contribution guidelines
-├── LICENSE                 # MIT License
-├── .env.example            # Environment template
-├── .gitignore             # Git ignore rules
-└── Makefile               # Build automation
+├── backend/
+│   ├── src/
+│   ├── services/
+│   ├── tests/
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   ├── .env.example
+│   └── Dockerfile
+├── database/
+│   ├── schemas/
+│   ├── seeds/
+│   └── migrations/
+├── .github/workflows/ci.yml
+├── docker-compose.yml
+├── .env.example
+├── Makefile
+├── DEVELOPMENT.md
+└── docs/
 ```
 
-## 🛠️ Tech Stack (Planned)
+## Development commands
 
-- **Frontend**: React + TypeScript
-- **Backend**: Python/Node.js (TBD)
-- **Database**: PostgreSQL
-- **AI/ML**: Custom models + third-party APIs
-- **Video Analysis**: Computer vision + motion tracking
+```bash
+make help
+make lint
+make test
+make clean
+```
 
 ## 📝 Phase 0 Progress
 
@@ -118,7 +139,7 @@ Bowling-HQ/
 
 ## 🎳 Physics & Prediction Foundations
 
-The repository now includes a first-pass bowling physics baseline for:
+The repository includes a first-pass bowling physics baseline for:
 - oil pattern difficulty scoring
 - ball reaction prediction
 - bowler outcome forecasting
@@ -126,6 +147,15 @@ The repository now includes a first-pass bowling physics baseline for:
 - Monte Carlo scenario simulation
 
 See `backend/services/physics_engine.py` and the related docs in `docs/`.
+
+## 📈 Impact
+
+Users typically see:
+- **+15-30 pins average improvement** in first 3 months
+- **90%+ tournament prediction accuracy**
+- **Significantly better equipment decisions**
+- **Measurable form improvements**
+- **Increased bowling enjoyment and engagement**
 
 ## 🤝 Contributing
 

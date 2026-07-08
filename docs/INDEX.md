@@ -55,12 +55,24 @@ Complete reference for all Bowling-HQ documentation.
 
 ---
 
+## 🤖 Operations & Coordination
+
+- **[ADMIN_ORCHESTRATION.md](ADMIN_ORCHESTRATION.md)** - Admin agent responsibilities, scoring, escalation, and learning loop
+- **[ADMIN_STATUS.md](ADMIN_STATUS.md)** - Current orchestration status, dependencies, blockers, and next actions
+- **[LEARNING_LOG.md](LEARNING_LOG.md)** - Lessons captured after each phase
+- **[DECISIONS_LOG.md](DECISIONS_LOG.md)** - Decision history and rationale
+- **[AGENT_PERFORMANCE.md](AGENT_PERFORMANCE.md)** - Speed, quality, and accuracy tracking
+- **[LESSONS_LEARNED.md](LESSONS_LEARNED.md)** - Repeatable patterns and self-corrections
+
+---
+
 ## 📖 How to Use This Index
 
 1. **First time?** → [Quick Start Guide](00_QUICK_START.md)
 2. **Understanding the system?** → Start with [01_PROJECT_OVERVIEW.md](01_PROJECT_OVERVIEW.md)
-3. **Building features?** → See implementation guides
-4. **Contributing code?** → [CONTRIBUTING.md](../CONTRIBUTING.md)
+3. **Running the project roadmap?** → Start with [ADMIN_ORCHESTRATION.md](ADMIN_ORCHESTRATION.md)
+4. **Building features?** → See implementation guides
+5. **Contributing code?** → [CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ---
 

@@ -1,63 +1,50 @@
-# Backend Directory
+# Backend
 
-This directory contains all Python/FastAPI code for the Bowling-HQ API server.
+The backend service provides the FastAPI application for Bowling-HQ along with a dependency-free bowling physics baseline used for prediction and planning work.
 
 ## Structure
 
-```
+```text
 backend/
-├── main.py              → FastAPI application entry point
-├── requirements.txt     → Python dependencies
-├── .env.example        → Environment variables template
-├── config.py           → Configuration management
-├── services/           → Business logic (engines)
-│   ├── commander_engine.py
-│   ├── ghost_engine.py
-│   ├── physics_engine.py
-│   ├── pattern_engine.py
-│   ├── maxwell_engine.py
-│   └── session_engine.py
-├── models/             → Data models and schemas
-│   ├── ball.py
-│   ├── pattern.py
-│   ├── session.py
-│   └── recommendation.py
-├── routes/             → API endpoints
-│   ├── commander.py
-│   ├── arsenal.py
-│   ├── patterns.py
-│   ├── sessions.py
-│   └── ghost_bowler.py
-├── database/           → Database connections
-│   ├── postgres.py
-│   ├── mongodb.py
-│   └── redis.py
-└── tests/              → Unit and integration tests
-    ├── test_commander.py
-    ├── test_ghost_bowler.py
-    ├── test_physics_engine.py
-    └── test_patterns.py
+├── src/
+│   ├── main.py              → FastAPI application entry point
+│   ├── config.py            → Configuration management
+│   ├── database/            → Database connections
+│   ├── models/              → API models and schemas
+│   ├── routes/              → HTTP endpoints
+│   ├── services/            → Application service layer
+│   └── tests/               → FastAPI app tests
+├── services/
+│   └── physics_engine.py    → Bowling physics baseline
+├── tests/
+│   └── test_physics_engine.py
+├── requirements.txt
+├── .env.example
+└── Dockerfile
 ```
 
-## Getting Started
+## Local development
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy environment template
-cp .env.example .env
-
-# Run the server
-uvicorn main:app --reload
+cp backend/.env.example backend/.env
+pip install -r backend/requirements.txt
+uvicorn src.main:app --app-dir backend --reload
 ```
 
-## Tech Stack
+## Tests
 
-- **Framework**: FastAPI
-- **ASGI Server**: Uvicorn
-- **Database**: PostgreSQL, MongoDB, Redis
-- **Language**: Python 3.11+
+Application tests:
+
+```bash
+cd backend
+PYTHONPATH=. pytest src/tests
+```
+
+Physics baseline regression tests:
+
+```bash
+python -m unittest discover -s backend/tests -p 'test_*.py'
+```
 
 ## Current Physics Baseline
 
