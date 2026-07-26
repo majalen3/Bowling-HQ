@@ -52,18 +52,35 @@ function installMockFetch(): jest.Mock {
 }
 
 describe('App', () => {
-  it('renders the Commander landing page and navigation', async () => {
+  it('renders the Home landing page and navigation', async () => {
     installMockFetch();
     render(<App />);
 
     expect(
-      await screen.findByRole('heading', { name: 'Opening Ball Advisor' }),
+      await screen.findByRole('heading', {
+        name: 'Tap a workflow and start bowling smarter',
+      }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Commander' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Arsenal' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Analytics' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Auth' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Dev' })).toBeInTheDocument();
+  });
+
+  it('navigates to the Commander page from Home', async () => {
+    installMockFetch();
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Commander' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Opening Ball Advisor' }),
+      ).toBeInTheDocument();
+    });
   });
 
   it('navigates to the Analytics page and shows stats', async () => {

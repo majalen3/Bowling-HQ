@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom';
 
 const LINKS: Array<{ to: string; label: string }> = [
-  { to: '/', label: 'Commander' },
+  { to: '/', label: 'Home' },
+  { to: '/commander', label: 'Commander' },
   { to: '/sessions', label: 'Sessions' },
   { to: '/arsenal', label: 'Arsenal' },
   { to: '/analytics', label: 'Analytics' },
+  { to: '/auth', label: 'Auth' },
   { to: '/dev', label: 'Dev' },
 ];
 
@@ -15,7 +17,7 @@ export function NavBar() {
         <NavLink
           key={link.to}
           to={link.to}
-          end={link.to === '/'}
+          end={link.to === '/' || link.to === '/commander'}
           className={({ isActive }) =>
             isActive ? 'nav-tab active' : 'nav-tab'
           }
