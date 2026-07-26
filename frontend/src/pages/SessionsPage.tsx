@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import {
+  addGameFromThrows,
   addGamesToSession,
   createSession,
   completeSession,
@@ -8,7 +9,7 @@ import {
   fetchSessionProgress,
   importScores,
 } from '../services/api';
-import type { GamesResponse } from '../types/games';
+import type { FramesResponse, GamesResponse } from '../types/games';
 import type { SessionProgressSnapshot } from '../types/sessionProgress';
 
 export function SessionsPage() {
@@ -19,18 +20,34 @@ export function SessionsPage() {
   const [sessionType, setSessionType] = useState('practice');
   const [locationName, setLocationName] = useState('');
   const [scoreInputs, setScoreInputs] = useState<Record<string, string>>({});
+  const [throwInputs, setThrowInputs] = useState<Record<string, string>>({});
+  const [entryMode, setEntryMode] = useState<Record<string, 'quick' | 'throws'>>({});
   const [gamesBySession, setGamesBySession] = useState<
     Record<string, GamesResponse>
+  >({});
+  const [framesByGame, setFramesByGame] = useState<
+    Record<string, FramesResponse>
   >({});
   const [csvText, setCsvText] = useState<Record<string, string>>({});
   const [csvSource, setCsvSource] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+
+  const loadGames = async (sessionId: string): Promise<void> => {
+    try {
+      const data = await fetchSessionGames(sessionId);
+      setGamesBySession((prev) => ({ ...prev, [sessionId]: data }));
+    } catch {
+      // Games may not exist yet; ignore.
+    }
+  };
 
   const loadSnapshot = async (): Promise<void> => {
     try {
       const data = await fetchSessionProgress();
       setSnapshot(data);
       setError(null);
+      // Auto-load games for every session when the snapshot refreshes.
+      await Promise.all(data.sessions.map((s) => loadGames(s.id)));
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -43,15 +60,6 @@ export function SessionsPage() {
   useEffect(() => {
     loadSnapshot();
   }, []);
-
-  const loadGames = async (sessionId: string): Promise<void> => {
-    try {
-      const data = await fetchSessionGames(sessionId);
-      setGamesBySession((prev) => ({ ...prev, [sessionId]: data }));
-    } catch {
-      // Games may not exist yet; ignore.
-    }
-  };
 
   const onStartSession = async (): Promise<void> => {
     if (!sessionType.trim()) {
@@ -110,6 +118,44 @@ export function SessionsPage() {
     }
   };
 
+  const onAddFromThrows = async (sessionId: string): Promise<void> => {
+    const raw = throwInputs[sessionId] ?? '';
+    const throws = raw
+      .split(/[\s,]+/)
+      .filter((t) => t.length > 0)
+      .map((t) => Number(t));
+    if (
+      throws.length < 12 ||
+      throws.length > 21 ||
+      throws.some((t) => Number.isNaN(t) || t < 0 || t > 10)
+    ) {
+      setError(
+        'Enter 12–21 throw values (0-10 each), space or comma separated. ' +
+          'Example: 10 10 10 10 10 10 10 10 10 10 10 10 (perfect game)',
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      const framesResp = await addGameFromThrows(sessionId, throws);
+      setFramesByGame((prev) => ({
+        ...prev,
+        [framesResp.game_id]: framesResp,
+      }));
+      setThrowInputs((prev) => ({ ...prev, [sessionId]: '' }));
+      await loadGames(sessionId);
+      setError(null);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Failed to add game from throws',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onImport = async (sessionId: string): Promise<void> => {
     const text = csvText[sessionId] ?? '';
     if (!text.trim()) {
@@ -153,6 +199,9 @@ export function SessionsPage() {
     }
   };
 
+  const getMode = (sessionId: string): 'quick' | 'throws' =>
+    entryMode[sessionId] ?? 'quick';
+
   return (
     <section className="stack">
       <header className="hero">
@@ -190,6 +239,7 @@ export function SessionsPage() {
 
       {snapshot?.sessions.map((session) => {
         const games = gamesBySession[session.id];
+        const mode = getMode(session.id);
         return (
           <section className="card" key={session.id}>
             <div className="ball-card-head">
@@ -202,31 +252,127 @@ export function SessionsPage() {
               <p className="subtext">@ {session.location_name}</p>
             )}
 
+            {games && games.count > 0 && (
+              <div>
+                <p className="subtext">
+                  {games.count} games · average {games.average}
+                </p>
+                <ul>
+                  {games.games.map((game) => {
+                    const frames = framesByGame[game.id];
+                    return (
+                      <li key={game.id}>
+                        Game {game.game_number}: {game.score}
+                        {frames && frames.frames.length > 0 && (
+                          <span className="subtext">
+                            {' '}
+                            (
+                            {frames.frames
+                              .map((f) =>
+                                f.is_strike
+                                  ? 'X'
+                                  : f.is_spare
+                                    ? `${f.ball1}/`
+                                    : `${f.ball1}-${f.ball2 ?? 0}`,
+                              )
+                              .join(' ')}
+                            )
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             {!session.completed_at && (
               <>
                 <div className="form-group">
-                  <label htmlFor={`scores-${session.id}`}>
-                    Game scores (comma separated, up to 5)
-                  </label>
-                  <input
-                    id={`scores-${session.id}`}
-                    placeholder="180, 200, 215"
-                    value={scoreInputs[session.id] ?? ''}
-                    onChange={(event) =>
-                      setScoreInputs((prev) => ({
-                        ...prev,
-                        [session.id]: event.target.value,
-                      }))
-                    }
-                  />
+                  <label>Score entry mode</label>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEntryMode((prev) => ({
+                          ...prev,
+                          [session.id]: 'quick',
+                        }))
+                      }
+                      disabled={mode === 'quick'}
+                    >
+                      Quick score
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEntryMode((prev) => ({
+                          ...prev,
+                          [session.id]: 'throws',
+                        }))
+                      }
+                      disabled={mode === 'throws'}
+                    >
+                      Frame-by-frame throws
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onAddScores(session.id)}
-                  disabled={busy}
-                >
-                  Add Scores
-                </button>
+
+                {mode === 'quick' && (
+                  <>
+                    <div className="form-group">
+                      <label htmlFor={`scores-${session.id}`}>
+                        Game scores (comma separated, up to 5)
+                      </label>
+                      <input
+                        id={`scores-${session.id}`}
+                        placeholder="180, 200, 215"
+                        value={scoreInputs[session.id] ?? ''}
+                        onChange={(event) =>
+                          setScoreInputs((prev) => ({
+                            ...prev,
+                            [session.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onAddScores(session.id)}
+                      disabled={busy}
+                    >
+                      Add Scores
+                    </button>
+                  </>
+                )}
+
+                {mode === 'throws' && (
+                  <>
+                    <div className="form-group">
+                      <label htmlFor={`throws-${session.id}`}>
+                        Throws (12–21 values 0-10, space or comma separated)
+                      </label>
+                      <input
+                        id={`throws-${session.id}`}
+                        placeholder="10 10 10 10 10 10 10 10 10 10 10 10"
+                        value={throwInputs[session.id] ?? ''}
+                        onChange={(event) =>
+                          setThrowInputs((prev) => ({
+                            ...prev,
+                            [session.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onAddFromThrows(session.id)}
+                      disabled={busy}
+                    >
+                      Add Game from Throws
+                    </button>
+                  </>
+                )}
 
                 <div className="form-group">
                   <label htmlFor={`csv-${session.id}`}>
@@ -278,29 +424,6 @@ export function SessionsPage() {
                   Mark complete
                 </button>
               </>
-            )}
-
-            <button
-              type="button"
-              onClick={() => loadGames(session.id)}
-              disabled={busy}
-            >
-              Refresh games
-            </button>
-
-            {games && games.count > 0 && (
-              <div>
-                <p className="subtext">
-                  {games.count} games · average {games.average}
-                </p>
-                <ul>
-                  {games.games.map((game) => (
-                    <li key={game.id}>
-                      Game {game.game_number}: {game.score}
-                    </li>
-                  ))}
-                </ul>
-              </div>
             )}
           </section>
         );

@@ -6,6 +6,7 @@ import type {
   SessionProgressSnapshot,
 } from '../types/sessionProgress';
 import type {
+  FramesResponse,
   GamesResponse,
   ScoreImportResult,
 } from '../types/games';
@@ -123,6 +124,43 @@ export async function addGamesToSession(
   }
 
   return (await response.json()) as GamesResponse;
+}
+
+export async function addGameFromThrows(
+  sessionId: string,
+  throws: number[],
+): Promise<FramesResponse> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/sessions/${sessionId}/games/from-throws`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ throws }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to add game from throws (${response.status})`);
+  }
+
+  return (await response.json()) as FramesResponse;
+}
+
+export async function fetchGameFrames(
+  sessionId: string,
+  gameId: string,
+): Promise<FramesResponse> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/sessions/${sessionId}/games/${gameId}/frames`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to load frames (${response.status})`);
+  }
+
+  return (await response.json()) as FramesResponse;
 }
 
 export async function importScores(

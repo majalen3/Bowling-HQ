@@ -3,10 +3,16 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from src.models.games import GamesResponse
+from src.models.games import (
+    FramesResponse,
+    GameFromThrowsRequest,
+    GamesResponse,
+)
 from src.models.import_scores import ScoreImportResult
 from src.services.games import (
+    add_game_from_throws,
     add_games,
+    get_game_frames,
     get_session_games,
     import_scores,
 )
@@ -40,6 +46,36 @@ def create_session_games(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(error),
         ) from error
+
+
+@router.post(
+    "/{session_id}/games/from-throws",
+    response_model=FramesResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_game_from_throws(
+    session_id: UUID,
+    payload: GameFromThrowsRequest,
+) -> FramesResponse:
+    """Record a game by submitting throw values; score is computed."""
+    try:
+        game, frames = add_game_from_throws(session_id, payload.throws)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+    return FramesResponse(game_id=game.id, frames=frames)
+
+
+@router.get(
+    "/{session_id}/games/{game_id}/frames",
+    response_model=FramesResponse,
+)
+def read_game_frames(session_id: UUID, game_id: UUID) -> FramesResponse:
+    """Return the frame-by-frame breakdown for a recorded game."""
+    frames = get_game_frames(game_id)
+    return FramesResponse(game_id=game_id, frames=frames)
 
 
 @router.post(
