@@ -2,6 +2,16 @@ import { render, screen } from '@testing-library/react';
 
 import { App } from './App';
 
+const originalFetch = global.fetch;
+
+afterEach(() => {
+  if (originalFetch) {
+    global.fetch = originalFetch;
+  } else {
+    delete (global as { fetch?: typeof fetch }).fetch;
+  }
+});
+
 describe('App', () => {
   it('renders the progress dashboard heading', async () => {
     Object.defineProperty(global, 'fetch', {
