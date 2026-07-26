@@ -39,10 +39,16 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_password: str = ""
 
-    # Security
+    # Security — fail loudly in non-dev if SECRET_KEY is still the placeholder
     secret_key: str = "change-me-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    def model_post_init(self, __context: object) -> None:
+        if self.environment != "development" and self.secret_key == "change-me-in-production":
+            raise ValueError(
+                "SECRET_KEY must be set to a secure value in non-development environments."
+            )
 
     # Logging
     log_level: str = "INFO"
