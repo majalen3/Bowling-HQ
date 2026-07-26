@@ -101,6 +101,7 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Bowling-HQ Progress' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Arsenal Simulator' })).toBeInTheDocument();
     expect(await screen.findByText('Sessions: 1 total / 0 completed / 1 active')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Session Type'), {
