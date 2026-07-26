@@ -38,7 +38,8 @@ def create_session(session: SessionCreate, db: Session = Depends(get_db)):
             INSERT INTO bowling_sessions
               (user_id, center_id, pattern_id, session_type, session_date, total_games, notes)
             VALUES
-              (:user_id, :center_id, :pattern_id, :session_type, :session_date, :total_games, :notes)
+              (:user_id, :center_id, :pattern_id, :session_type,
+               :session_date, :total_games, :notes)
             RETURNING *
         """),
         session.model_dump(),

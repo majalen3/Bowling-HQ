@@ -33,8 +33,10 @@ def create_pattern(pattern: PatternCreate, db: Session = Depends(get_db)):
     """Add a new lane pattern."""
     row = db.execute(
         text("""
-            INSERT INTO patterns (name, pattern_type, oil_volume, oil_length_ft, difficulty, description, notes)
-            VALUES (:name, :pattern_type, :oil_volume, :oil_length_ft, :difficulty, :description, :notes)
+            INSERT INTO patterns
+              (name, pattern_type, oil_volume, oil_length_ft, difficulty, description, notes)
+            VALUES
+              (:name, :pattern_type, :oil_volume, :oil_length_ft, :difficulty, :description, :notes)
             RETURNING *
         """),
         pattern.model_dump(),

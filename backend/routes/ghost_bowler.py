@@ -16,7 +16,11 @@ def get_profile(user_id: int = DEFAULT_USER_ID, db: Session = Depends(get_db)):
     ).fetchone()
 
     if user is None:
-        return {"message": "No profile found. Start recording sessions to build your Ghost Bowler profile."}
+        return {
+            "message": (
+                "No profile found. Start recording sessions to build your Ghost Bowler profile."
+            )
+        }
 
     # Compute basic performance metrics from historical sessions
     stats = db.execute(
@@ -38,15 +42,16 @@ def get_profile(user_id: int = DEFAULT_USER_ID, db: Session = Depends(get_db)):
         "user": dict(user._mapping),
         "performance": {
             "total_sessions": stats.total_sessions or 0,
-            "total_games":    stats.total_games or 0,
-            "avg_score":      round(float(stats.avg_score), 1) if stats.avg_score else None,
-            "high_game":      stats.high_game,
-            "low_game":       stats.low_game,
+            "total_games": stats.total_games or 0,
+            "avg_score": round(float(stats.avg_score), 1) if stats.avg_score else None,
+            "high_game": stats.high_game,
+            "low_game": stats.low_game,
         },
         "status": "active" if (stats.total_games or 0) >= 10 else "building",
         "message": (
             "Ghost Bowler profile active — enough data to generate predictions."
             if (stats.total_games or 0) >= 10
-            else f"Keep bowling! {max(0, 10 - (stats.total_games or 0))} more games needed to activate Ghost Bowler predictions."
+            else f"Keep bowling! {max(0, 10 - (stats.total_games or 0))} more games needed"
+            " to activate Ghost Bowler predictions."
         ),
     }

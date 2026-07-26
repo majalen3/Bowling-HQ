@@ -36,57 +36,57 @@ MAX_CONFIDENCE_SCORE: float = 97.0
 # (oil_volume) -> score per coverstock_type
 _COVER_OIL_SCORE: dict[str, dict[str, int]] = {
     "very_heavy": {
-        "pearl_reactive":  38,
+        "pearl_reactive": 38,
         "hybrid_reactive": 32,
-        "reactive_resin":  28,
-        "urethane":         8,
-        "plastic":         -20,
+        "reactive_resin": 28,
+        "urethane": 8,
+        "plastic": -20,
     },
     "heavy": {
-        "reactive_resin":  38,
+        "reactive_resin": 38,
         "hybrid_reactive": 35,
-        "pearl_reactive":  30,
-        "urethane":        10,
-        "plastic":         -20,
+        "pearl_reactive": 30,
+        "urethane": 10,
+        "plastic": -20,
     },
     "medium": {
         "hybrid_reactive": 38,
-        "reactive_resin":  35,
-        "pearl_reactive":  28,
-        "urethane":        18,
-        "plastic":         -15,
+        "reactive_resin": 35,
+        "pearl_reactive": 28,
+        "urethane": 18,
+        "plastic": -15,
     },
     "light": {
-        "urethane":        38,
-        "pearl_reactive":  30,
+        "urethane": 38,
+        "pearl_reactive": 30,
         "hybrid_reactive": 22,
-        "reactive_resin":  15,
-        "plastic":          8,
+        "reactive_resin": 15,
+        "plastic": 8,
     },
 }
 
 # (length_bucket) -> score per finish type
 _FINISH_LENGTH_SCORE: dict[str, dict[str, int]] = {
     "short": {            # < 36 ft — earlier hook needed
-        "500_grit":  28,
+        "500_grit": 28,
         "1000_grit": 18,
-        "2000_grit":  8,
-        "4000_grit":  0,
-        "polished":  -15,
+        "2000_grit": 8,
+        "4000_grit": 0,
+        "polished": -15,
     },
     "medium": {           # 36-42 ft — balanced
         "1000_grit": 28,
         "2000_grit": 25,
-        "500_grit":  15,
+        "500_grit": 15,
         "4000_grit": 15,
-        "polished":  10,
+        "polished": 10,
     },
     "long": {             # > 42 ft — longer skid required
-        "polished":  28,
+        "polished": 28,
         "4000_grit": 22,
         "2000_grit": 15,
-        "1000_grit":  5,
-        "500_grit":  -10,
+        "1000_grit": 5,
+        "500_grit": -10,
     },
 }
 
@@ -111,7 +111,9 @@ def _length_bucket(oil_length_ft: int) -> str:
     return "long"
 
 
-def _score_ball(ball_row, oil_volume: str, length_bucket: str, difficulty: int, session_type: str) -> float:
+def _score_ball(
+    ball_row, oil_volume: str, length_bucket: str, difficulty: int, session_type: str
+) -> float:
     """
     Return a confidence score in [MIN_CONFIDENCE_SCORE, MAX_CONFIDENCE_SCORE] for
     one ball against the given lane conditions.
@@ -164,11 +166,11 @@ def _score_ball(ball_row, oil_volume: str, length_bucket: str, difficulty: int, 
 def _build_reason(ball_row, oil_volume: str, length_bucket: str, difficulty: int) -> str:
     """Compose a plain-English explanation for why this ball was recommended."""
     cover_labels = {
-        "pearl_reactive":  "pearl reactive coverstock (long skid + angular backend)",
+        "pearl_reactive": "pearl reactive coverstock (long skid + angular backend)",
         "hybrid_reactive": "hybrid reactive coverstock (balanced motion)",
-        "reactive_resin":  "reactive resin coverstock (controllable hook)",
-        "urethane":        "urethane coverstock (smooth, controllable arc)",
-        "plastic":         "plastic coverstock",
+        "reactive_resin": "reactive resin coverstock (controllable hook)",
+        "urethane": "urethane coverstock (smooth, controllable arc)",
+        "plastic": "plastic coverstock",
     }
     cover = (ball_row.coverstock_type or "unknown").lower()
     finish = (ball_row.finish or "unknown").lower()
@@ -176,7 +178,8 @@ def _build_reason(ball_row, oil_volume: str, length_bucket: str, difficulty: int
 
     parts = [
         f"{ball_row.brand} {ball_row.name} features a {cover_labels.get(cover, cover)}",
-        f"finished at {finish.replace('_', ' ')} for a {'longer' if 'polished' in finish else 'earlier'} breakpoint",
+        f"finished at {finish.replace('_', ' ')} for a"
+        f" {'longer' if 'polished' in finish else 'earlier'} breakpoint",
         f"with a {core} core (RG {ball_row.rg}, diff {ball_row.differential})",
     ]
     if oil_volume in ("heavy", "very_heavy"):
@@ -193,7 +196,9 @@ def _build_reason(ball_row, oil_volume: str, length_bucket: str, difficulty: int
 # Public API
 # ---------------------------------------------------------------------------
 
-def get_recommendation(db: "DBSession", pattern_id: int, session_type: str, user_id: int) -> dict[str, Any]:
+def get_recommendation(
+    db: "DBSession", pattern_id: int, session_type: str, user_id: int
+) -> dict[str, Any]:
     """
     Query the database for the given pattern and all active non-spare balls,
     score every ball against the pattern conditions, and return the best pick
@@ -242,22 +247,22 @@ def get_recommendation(db: "DBSession", pattern_id: int, session_type: str, user
 
     alternatives = [
         {
-            "ball_id":   row.id,
+            "ball_id": row.id,
             "ball_name": f"{row.brand} {row.name}",
             "confidence": s,
-            "reason":     r,
+            "reason": r,
         }
         for s, row, r in scored[1:4]  # top 3 alternatives
     ]
 
     return {
-        "ball_id":            best_ball.id,
-        "ball_name":          f"{best_ball.brand} {best_ball.name}",
-        "brand":              best_ball.brand,
-        "confidence_score":   best_score,
-        "reason":             best_reason,
-        "alternatives":       alternatives,
-        "pattern_name":       pattern_row.name,
+        "ball_id": best_ball.id,
+        "ball_name": f"{best_ball.brand} {best_ball.name}",
+        "brand": best_ball.brand,
+        "confidence_score": best_score,
+        "reason": best_reason,
+        "alternatives": alternatives,
+        "pattern_name": pattern_row.name,
         "pattern_difficulty": difficulty,
-        "tip":                _DIFFICULTY_TIP.get(difficulty),
+        "tip": _DIFFICULTY_TIP.get(difficulty),
     }

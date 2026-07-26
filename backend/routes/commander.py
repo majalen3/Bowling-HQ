@@ -31,6 +31,9 @@ def recommend_opening_ball(req: RecommendationRequest, db: Session = Depends(get
 def list_patterns_for_commander(db: Session = Depends(get_db)):
     """List all patterns available for recommendation queries."""
     rows = db.execute(
-        text("SELECT id, name, pattern_type, oil_volume, oil_length_ft, difficulty FROM patterns ORDER BY difficulty, name")
+        text(
+            "SELECT id, name, pattern_type, oil_volume, oil_length_ft, difficulty"
+            " FROM patterns ORDER BY difficulty, name"
+        )
     ).fetchall()
     return [dict(r._mapping) for r in rows]
