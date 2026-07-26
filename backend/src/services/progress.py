@@ -60,7 +60,10 @@ def get_progress_snapshot() -> ProgressSnapshot:
     ]
 
     return ProgressSnapshot(
-        finished_target="Ship Bowling-HQ MVP with visible tracked progress and release-ready quality gates.",
+        finished_target=(
+            "Ship Bowling-HQ MVP with visible tracked progress and "
+            "release-ready quality gates."
+        ),
         scope_lock=[
             "Progress board visibility",
             "Backend progress status endpoint",
