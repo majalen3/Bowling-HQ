@@ -24,3 +24,19 @@ export type ScoreImportRequest = {
   csv_text: string;
   source: string;
 };
+
+export type FrameItem = {
+  id: string;
+  game_id: string;
+  frame_number: number;
+  ball1: number;
+  ball2: number | null;
+  ball3: number | null;
+  is_strike: boolean;
+  is_spare: boolean;
+};
+
+export type FramesResponse = {
+  game_id: string;
+  frames: FrameItem[];
+};
