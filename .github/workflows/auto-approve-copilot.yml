@@ -1,4 +1,4 @@
-name: Auto-approve Copilot workflow runs
+name: Auto-approve GitHub Copilot workflow runs
 
 on:
   workflow_run:
@@ -13,8 +13,8 @@ permissions:
 
 jobs:
   approve:
-    # 198982749 is the Copilot SWE Agent GitHub App bot account ID.
-    # Verify via https://api.github.com/users/Copilot if GitHub changes this actor.
+    # 198982749 is the GitHub user ID for the @Copilot app account.
+    # Verify via https://api.github.com/users/Copilot if this actor changes.
     if: ${{ github.event.workflow_run.actor.id == 198982749 && github.event.workflow_run.actor.type == 'Bot' }}
     runs-on: ubuntu-latest
     permissions:
@@ -25,7 +25,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -eu
           echo "Approving run ${{ github.event.workflow_run.id }} in ${{ github.repository }}"
           gh run approve ${{ github.event.workflow_run.id }} --repo ${{ github.repository }}
           echo "Approval request submitted."
