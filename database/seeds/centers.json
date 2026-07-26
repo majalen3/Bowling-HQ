@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "Maxwell AFB Bowling Center",
+    "location": "Maxwell AFB, Montgomery, AL",
+    "number_of_lanes": 16,
+    "notes": "Primary home center. Well-maintained lanes with consistent oil application."
+  },
+  {
+    "id": 2,
+    "name": "Pointe North Bowling",
+    "location": "Montgomery, AL",
+    "number_of_lanes": 24,
+    "notes": "Nearby commercial center used for tournaments and open bowling."
+  }
+]

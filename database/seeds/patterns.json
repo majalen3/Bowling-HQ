@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "name": "House Shot",
+    "pattern_type": "house",
+    "oil_volume": "light",
+    "oil_length_ft": 40,
+    "difficulty": 1,
+    "description": "Standard recreational house shot. Light oil concentrated in the middle with dry outside edges. Very forgiving and easy to score on.",
+    "notes": "Most common league condition"
+  },
+  {
+    "id": 2,
+    "name": "Maxwell AFB House",
+    "pattern_type": "house",
+    "oil_volume": "medium",
+    "oil_length_ft": 38,
+    "difficulty": 2,
+    "description": "Maxwell AFB bowling center standard house shot. Medium oil volume with slight taper. More challenging than a typical recreational house shot.",
+    "notes": "Home center pattern"
+  },
+  {
+    "id": 3,
+    "name": "Maxwell AFB Tournament",
+    "pattern_type": "sport",
+    "oil_volume": "heavy",
+    "oil_length_ft": 36,
+    "difficulty": 3,
+    "description": "Maxwell AFB tournament-style pattern. Heavier oil volume with shorter length creates demanding conditions requiring precise ball selection.",
+    "notes": "Used for in-house tournaments"
+  },
+  {
+    "id": 4,
+    "name": "PBA Chameleon",
+    "pattern_type": "pba",
+    "oil_volume": "medium",
+    "oil_length_ft": 39,
+    "difficulty": 2,
+    "description": "Classic PBA animal pattern. Medium oil volume with a relatively even distribution. Considered the most bowler-friendly PBA pattern.",
+    "notes": "Longest of the PBA animal patterns"
+  },
+  {
+    "id": 5,
+    "name": "PBA Cheetah",
+    "pattern_type": "pba",
+    "oil_volume": "light",
+    "oil_length_ft": 33,
+    "difficulty": 2,
+    "description": "Short PBA animal pattern with light oil. The short length creates an early hook requiring urethane or polished reactive balls.",
+    "notes": "Shortest PBA animal pattern — demands accuracy"
+  },
+  {
+    "id": 6,
+    "name": "PBA Viper",
+    "pattern_type": "pba",
+    "oil_volume": "medium",
+    "oil_length_ft": 37,
+    "difficulty": 3,
+    "description": "Challenging PBA animal pattern with medium oil and a tight window. Requires consistent ball speed and accurate targeting.",
+    "notes": "Narrow strike zone"
+  },
+  {
+    "id": 7,
+    "name": "PBA Scorpion",
+    "pattern_type": "pba",
+    "oil_volume": "heavy",
+    "oil_length_ft": 42,
+    "difficulty": 3,
+    "description": "Long PBA animal pattern with heavy oil. Requires a strong backend ball that can handle the distance before hooking.",
+    "notes": "Demands patience and strong ball"
+  },
+  {
+    "id": 8,
+    "name": "PBA Shark",
+    "pattern_type": "pba",
+    "oil_volume": "very_heavy",
+    "oil_length_ft": 40,
+    "difficulty": 4,
+    "description": "The most demanding PBA animal pattern. Very heavy oil volume requires maximum hook potential and precision.",
+    "notes": "Hardest PBA animal — very heavy oil"
+  },
+  {
+    "id": 9,
+    "name": "Sport Shot",
+    "pattern_type": "sport",
+    "oil_volume": "heavy",
+    "oil_length_ft": 38,
+    "difficulty": 3,
+    "description": "USBC Sport shot challenge. Heavier and more uniform oil distribution than a house shot, removing the built-in targeting aid.",
+    "notes": "Eliminates the hooking boards advantage"
+  },
+  {
+    "id": 10,
+    "name": "US Open",
+    "pattern_type": "pba",
+    "oil_volume": "very_heavy",
+    "oil_length_ft": 41,
+    "difficulty": 4,
+    "description": "One of the most difficult patterns in bowling. Extremely heavy oil with a very tight window for error. Only elite equipment and execution scores well.",
+    "notes": "Considered the toughest major in bowling"
+  }
+]
