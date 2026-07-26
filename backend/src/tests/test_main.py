@@ -25,3 +25,16 @@ def test_health_endpoint_returns_ok() -> None:
 def test_non_development_requires_secret_key() -> None:
     with pytest.raises(ValueError):
         Settings(ENVIRONMENT="production")
+
+
+def test_progress_endpoint_returns_board_snapshot() -> None:
+    response = client.get("/api/v1/progress")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["finished_target"]
+    assert payload["scope_lock"]
+    assert payload["release_gate"]
+    assert payload["board"]
+    statuses = {item["status"] for item in payload["board"]}
+    assert statuses == {"backlog", "in_progress", "done"}
