@@ -1,3 +1,6 @@
 # Migrations
 
-This directory is reserved for future database migrations.
+Apply migrations in lexical order after the base schema.
+
+- `001_session_progress_indexes.sql` adds indexes used by session progress
+  workflows.

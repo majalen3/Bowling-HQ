@@ -1,5 +1,5 @@
-import { HomePage } from './pages/HomePage';
+import { ProgressPage } from './pages/ProgressPage';
 
 export function App() {
-  return <HomePage />;
+  return <ProgressPage />;
 }
