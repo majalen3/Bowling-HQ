@@ -1,4 +1,4 @@
-name: Auto-approve Copilot CI
+name: Auto-approve Copilot workflow runs
 
 on:
   workflow_run:
@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   approve:
+    # 198982749 is the Copilot SWE Agent GitHub App bot account ID.
     if: ${{ github.event.workflow_run.actor.id == 198982749 && github.event.workflow_run.actor.type == 'Bot' }}
     runs-on: ubuntu-latest
     permissions:
