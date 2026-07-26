@@ -15,7 +15,7 @@ afterEach(() => {
   }
 });
 
-describe('fetchProgressSnapshot', () => {
+describe('progress API helpers', () => {
   it('returns parsed progress data for successful responses', async () => {
     const snapshot = {
       finished_target: 'Ship MVP',

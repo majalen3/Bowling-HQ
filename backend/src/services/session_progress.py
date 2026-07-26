@@ -76,6 +76,8 @@ class PostgresSessionProgressRepository:
                 cursor.execute(
                     """
                     UPDATE bowling_sessions
+                    -- Keep completion idempotent: return existing completion
+                    -- timestamp for already-completed sessions.
                     SET completed_at = COALESCE(completed_at, NOW())
                     WHERE id = %s
                     RETURNING id, session_type, location_name, started_at,
