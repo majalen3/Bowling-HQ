@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { fetchProgressSnapshot } from '../services/api';
+import {
+  completeSession,
+  createSession,
+  fetchProgressSnapshot,
+  fetchSessionProgress,
+} from '../services/api';
 import type { BoardStatus, ProgressSnapshot } from '../types/progress';
+import type { SessionProgressSnapshot } from '../types/sessionProgress';
 
 const BOARD_LABELS: Record<BoardStatus, string> = {
   backlog: 'Backlog',
@@ -11,16 +17,25 @@ const BOARD_LABELS: Record<BoardStatus, string> = {
 
 export function ProgressPage() {
   const [progress, setProgress] = useState<ProgressSnapshot | null>(null);
+  const [sessionProgress, setSessionProgress] = useState<SessionProgressSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionType, setSessionType] = useState('practice');
+  const [locationName, setLocationName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let isActive = true;
 
-    const load = async () => {
+    const load = async (): Promise<void> => {
       try {
-        const snapshot = await fetchProgressSnapshot();
+        const [snapshot, sessionsSnapshot] = await Promise.all([
+          fetchProgressSnapshot(),
+          fetchSessionProgress(),
+        ]);
         if (isActive) {
           setProgress(snapshot);
+          setSessionProgress(sessionsSnapshot);
+          setError(null);
         }
       } catch (loadError) {
         if (isActive) {
@@ -35,6 +50,53 @@ export function ProgressPage() {
       isActive = false;
     };
   }, []);
+
+  const refreshSnapshots = async (): Promise<void> => {
+    const [snapshot, sessionsSnapshot] = await Promise.all([
+      fetchProgressSnapshot(),
+      fetchSessionProgress(),
+    ]);
+    setProgress(snapshot);
+    setSessionProgress(sessionsSnapshot);
+  };
+
+  const onStartSession = async (): Promise<void> => {
+    if (!sessionType.trim()) {
+      setError('Session type is required');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await createSession({
+        session_type: sessionType.trim(),
+        location_name: locationName.trim() || undefined,
+      });
+      setLocationName('');
+      await refreshSnapshots();
+      setError(null);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to start session');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onCompleteSession = async (sessionId: string): Promise<void> => {
+    setIsSaving(true);
+    try {
+      await completeSession(sessionId);
+      await refreshSnapshots();
+      setError(null);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Failed to complete session',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const groupedItems = useMemo(() => {
     if (!progress) {
@@ -68,6 +130,46 @@ export function ProgressPage() {
             <ul>
               {progress.release_gate.map((gate) => (
                 <li key={gate}>{gate}</li>
+              ))}
+            </ul>
+            <h2>Slice 1: Session Progress Workflow</h2>
+            <p>
+              Sessions: {sessionProgress?.total_sessions ?? 0} total /{' '}
+              {sessionProgress?.completed_sessions ?? 0} completed /{' '}
+              {sessionProgress?.active_sessions ?? 0} active
+            </p>
+            <label htmlFor="sessionType">Session Type</label>
+            <input
+              id="sessionType"
+              value={sessionType}
+              onChange={(event) => setSessionType(event.target.value)}
+            />
+            <label htmlFor="locationName">Location</label>
+            <input
+              id="locationName"
+              value={locationName}
+              onChange={(event) => setLocationName(event.target.value)}
+            />
+            <button type="button" onClick={onStartSession} disabled={isSaving}>
+              Start session
+            </button>
+            <ul>
+              {sessionProgress?.sessions.map((session) => (
+                <li key={session.id}>
+                  <strong>{session.session_type}</strong>
+                  {session.location_name ? ` @ ${session.location_name}` : ''}
+                  {session.completed_at ? (
+                    ' (completed)'
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onCompleteSession(session.id)}
+                      disabled={isSaving}
+                    >
+                      Mark complete
+                    </button>
+                  )}
+                </li>
               ))}
             </ul>
             {(Object.keys(BOARD_LABELS) as BoardStatus[]).map((status) => (
