@@ -1,6 +1,6 @@
 import unittest
 
-from backend.services.physics_engine import (
+from services.physics_engine import (
     BallSpec,
     BowlerProfile,
     Environment,

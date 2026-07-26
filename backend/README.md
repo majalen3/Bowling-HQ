@@ -37,13 +37,14 @@ Application tests:
 
 ```bash
 cd backend
-PYTHONPATH=. pytest src/tests
+pytest src/tests
 ```
 
 Physics baseline regression tests:
 
 ```bash
-python -m unittest discover -s backend/tests -p 'test_*.py'
+cd backend
+python -m unittest discover -s tests -p 'test_*.py'
 ```
 
 ## Current Physics Baseline
