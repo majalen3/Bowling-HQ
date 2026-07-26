@@ -32,6 +32,7 @@ This directory contains all Bowling-HQ documentation, split from the original RE
 - `CONTRIBUTING.md` - Development guidelines
 
 ### Operations & Coordination
+- `PROJECT_MANAGER.md` - Single-page PM reference to run the project day to day
 - `ADMIN_ORCHESTRATION.md` - Admin agent mission, decision loop, and escalation rules
 - `ADMIN_STATUS.md` - Live orchestration snapshot and dependency tracker
 - `LEARNING_LOG.md` - Phase-by-phase lessons and iteration history

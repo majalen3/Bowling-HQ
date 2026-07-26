@@ -45,6 +45,7 @@ Complete reference for all Bowling-HQ documentation.
 
 ## 🤖 Operations & Coordination
 
+- **[PROJECT_MANAGER.md](PROJECT_MANAGER.md)** - Single-page project manager reference and operating checklist
 - **[ADMIN_ORCHESTRATION.md](ADMIN_ORCHESTRATION.md)** - Admin agent responsibilities, scoring, escalation, and learning loop
 - **[ADMIN_STATUS.md](ADMIN_STATUS.md)** - Current orchestration status, dependencies, blockers, and next actions
 - **[LEARNING_LOG.md](LEARNING_LOG.md)** - Lessons captured after each phase
