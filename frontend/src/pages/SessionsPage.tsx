@@ -268,13 +268,45 @@ export function SessionsPage() {
                             {' '}
                             (
                             {frames.frames
-                              .map((f) =>
-                                f.is_strike
+                              .map((f, idx) => {
+                                if (idx === 9) {
+                                  // 10th frame: show all throws that occurred
+                                  const parts: string[] = [];
+                                  if (f.is_strike) {
+                                    parts.push('X');
+                                    if (f.ball2 !== null)
+                                      parts.push(
+                                        f.ball2 === 10
+                                          ? 'X'
+                                          : String(f.ball2),
+                                      );
+                                    if (f.ball3 !== null)
+                                      parts.push(
+                                        f.ball3 === 10
+                                          ? 'X'
+                                          : String(f.ball3),
+                                      );
+                                  } else if (f.is_spare) {
+                                    parts.push(String(f.ball1));
+                                    parts.push('/');
+                                    if (f.ball3 !== null)
+                                      parts.push(
+                                        f.ball3 === 10
+                                          ? 'X'
+                                          : String(f.ball3),
+                                      );
+                                  } else {
+                                    parts.push(String(f.ball1));
+                                    parts.push(String(f.ball2 ?? 0));
+                                  }
+                                  return parts.join('-');
+                                }
+                                return f.is_strike
                                   ? 'X'
                                   : f.is_spare
                                     ? `${f.ball1}/`
-                                    : `${f.ball1}-${f.ball2 ?? 0}`,
-                              )
+                                    : `${f.ball1}-${f.ball2 ?? 0}`;
+                              })
                               .join(' ')}
                             )
                           </span>

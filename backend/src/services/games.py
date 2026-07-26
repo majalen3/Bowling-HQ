@@ -420,12 +420,17 @@ def validate_throws(throws: list[int]) -> None:
 
 
 def parse_throws_to_frames(throws: list[int]) -> list[dict]:
-    """Convert an ordered list of throws into frame-by-frame dicts."""
+    """Convert an ordered list of throws into frame-by-frame dicts.
+
+    Raises ValueError if the throws list is too short to complete a frame.
+    """
     frames: list[dict] = []
     i = 0
     for frame_num in range(1, 11):
         if i >= len(throws):
-            break
+            raise ValueError(
+                f"Throws list too short: expected ball1 for frame {frame_num}"
+            )
         ball1 = throws[i]
         if frame_num < 10:
             if ball1 == 10:
@@ -441,7 +446,12 @@ def parse_throws_to_frames(throws: list[int]) -> list[dict]:
                 )
                 i += 1
             else:
-                ball2 = throws[i + 1] if i + 1 < len(throws) else 0
+                if i + 1 >= len(throws):
+                    raise ValueError(
+                        "Throws list too short: expected ball2 "
+                        f"for frame {frame_num}"
+                    )
+                ball2 = throws[i + 1]
                 is_spare = (ball1 + ball2) == 10
                 frames.append(
                     {
@@ -455,11 +465,24 @@ def parse_throws_to_frames(throws: list[int]) -> list[dict]:
                 )
                 i += 2
         else:
-            # 10th frame: up to 3 throws
-            ball2 = throws[i + 1] if i + 1 < len(throws) else 0
-            ball3 = throws[i + 2] if i + 2 < len(throws) else None
+            # 10th frame: always needs ball1 + ball2; ball3 on strike/spare.
+            if i + 1 >= len(throws):
+                raise ValueError(
+                    "Throws list too short: 10th frame requires at least "
+                    "2 throws"
+                )
+            ball2 = throws[i + 1]
             is_strike = ball1 == 10
             is_spare = not is_strike and (ball1 + ball2) == 10
+            if is_strike or is_spare:
+                if i + 2 >= len(throws):
+                    raise ValueError(
+                        "Throws list too short: 10th frame strike/spare "
+                        "requires a bonus throw"
+                    )
+                ball3 = throws[i + 2]
+            else:
+                ball3 = None
             frames.append(
                 {
                     "frame_number": 10,
