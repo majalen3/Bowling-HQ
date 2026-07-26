@@ -120,3 +120,4 @@ def test_hash_password_round_trip() -> None:
 
     assert password_hash != "supersecret"
     assert verify_password("supersecret", password_hash)
+    assert not verify_password("wrongpassword", password_hash)
