@@ -4,7 +4,8 @@ import { App } from './App';
 
 describe('App', () => {
   it('renders the progress dashboard heading', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue({
+    Object.defineProperty(global, 'fetch', {
+      value: jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         finished_target: 'Ship MVP',
@@ -19,7 +20,10 @@ describe('App', () => {
           },
         ],
       }),
-    } as Response);
+      }),
+      configurable: true,
+      writable: true,
+    });
 
     render(<App />);
 
