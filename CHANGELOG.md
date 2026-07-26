@@ -4,6 +4,21 @@ All notable changes to Bowling HQ will be documented in this file.
 
 ## [Unreleased]
 
+### Phase 1 - Backend & Frontend Implementation
+
+#### Added
+- `backend/db.py` — async database connection layer (SQLAlchemy/PostgreSQL, Motor/MongoDB, Redis)
+- `backend/models/__init__.py` — full SQLAlchemy ORM models for all 11 schema tables
+- `backend/schemas/__init__.py` — Pydantic v2 request/response schemas
+- `backend/routers/arsenal.py` — ball catalog + user arsenal endpoints
+- `backend/routers/patterns.py` — lane patterns and bowling centers endpoints
+- `backend/routers/sessions.py` — session creation and game recording endpoints
+- `backend/routers/recommendations.py` — Commander AI opening-ball recommendation engine
+- `backend/main.py` — updated with lifespan, all routers mounted at `/api/v1`
+- `frontend/index.html`, `frontend/vite.config.ts`, `frontend/tsconfig*.json` — Vite/TS config
+- `frontend/tailwind.config.js`, `frontend/postcss.config.js` — Tailwind CSS setup
+- `frontend/src/` — full React+TS scaffold: App, Layout, pages (Dashboard, Arsenal, Patterns, Sessions, Recommendations), API client, UI components
+
 ### Phase 0 - Documentation & Design
 - ✅ Comprehensive platform documentation (14 sections)
 - ✅ System architecture design
