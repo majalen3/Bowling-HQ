@@ -4,26 +4,36 @@ Commander AI — Rule-Based Ball Recommendation Engine
 Scores each active ball in the arsenal against the given pattern's
 characteristics and returns a ranked list of recommendations.
 
-Scoring rubric (max ~100 points):
-  - Oil volume match   : up to 40 pts
-  - Pattern length     : up to 30 pts
-  - Core type bonus    : up to 10 pts
-  - RG / differential  : up to 10 pts
-  - Session type adj.  : ±5 pts
+Scoring rubric (0-100 scale):
+  - Oil volume match   : up to 38 pts  (coverstock vs. oil_volume)
+  - Pattern length     : up to 28 pts  (finish vs. oil_length bucket)
+  - Core type bonus    : up to  8 pts  (asym on hard, sym on easy)
+  - RG / differential  : up to 10 pts  (fine-tune for oil extremes)
+  - Session type adj.  :       +4 pts  (tournament + high-hook bonus)
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session as DBSession
 
 # ---------------------------------------------------------------------------
+# Named constants
+# ---------------------------------------------------------------------------
+
+# Confidence score bounds (displayed 0-100 scale).
+# 30 = floor so even a poor match shows a meaningful number.
+# 97 = ceiling reserved for when real performance data is integrated.
+MIN_CONFIDENCE_SCORE: float = 30.0
+MAX_CONFIDENCE_SCORE: float = 97.0
+
+# ---------------------------------------------------------------------------
 # Lookup tables
 # ---------------------------------------------------------------------------
 
-# (coverstock_type) -> score for each oil_volume bucket
+# (oil_volume) -> score per coverstock_type
 _COVER_OIL_SCORE: dict[str, dict[str, int]] = {
     "very_heavy": {
         "pearl_reactive":  38,
@@ -55,23 +65,23 @@ _COVER_OIL_SCORE: dict[str, dict[str, int]] = {
     },
 }
 
-# (finish) -> score for each length bucket
+# (length_bucket) -> score per finish type
 _FINISH_LENGTH_SCORE: dict[str, dict[str, int]] = {
-    "short": {            # < 36 ft
+    "short": {            # < 36 ft — earlier hook needed
         "500_grit":  28,
         "1000_grit": 18,
         "2000_grit":  8,
         "4000_grit":  0,
         "polished":  -15,
     },
-    "medium": {           # 36-42 ft
+    "medium": {           # 36-42 ft — balanced
         "1000_grit": 28,
         "2000_grit": 25,
         "500_grit":  15,
         "4000_grit": 15,
         "polished":  10,
     },
-    "long": {             # > 42 ft
+    "long": {             # > 42 ft — longer skid required
         "polished":  28,
         "4000_grit": 22,
         "2000_grit": 15,
@@ -93,6 +103,7 @@ _DIFFICULTY_TIP: dict[int, str] = {
 # ---------------------------------------------------------------------------
 
 def _length_bucket(oil_length_ft: int) -> str:
+    """Bucket an oil length in feet into 'short', 'medium', or 'long'."""
     if oil_length_ft < 36:
         return "short"
     if oil_length_ft <= 42:
@@ -101,7 +112,17 @@ def _length_bucket(oil_length_ft: int) -> str:
 
 
 def _score_ball(ball_row, oil_volume: str, length_bucket: str, difficulty: int, session_type: str) -> float:
-    """Return a 0-100 confidence score for one ball against the given conditions."""
+    """
+    Return a confidence score in [MIN_CONFIDENCE_SCORE, MAX_CONFIDENCE_SCORE] for
+    one ball against the given lane conditions.
+
+    Scoring components:
+      1. Oil volume vs. coverstock type  (up to 38 pts)
+      2. Pattern length vs. ball finish  (up to 28 pts)
+      3. Core type bonus for difficulty  (up to  8 pts)
+      4. RG / differential fine-tune     (up to 10 pts)
+      5. Tournament session boost        (       +4 pts)
+    """
     score = 0.0
 
     # 1. Oil volume vs coverstock
@@ -114,7 +135,7 @@ def _score_ball(ball_row, oil_volume: str, length_bucket: str, difficulty: int, 
     len_map = _FINISH_LENGTH_SCORE.get(length_bucket, _FINISH_LENGTH_SCORE["medium"])
     score += len_map.get(finish, 5)
 
-    # 3. Core type bonus for higher difficulty
+    # 3. Core type bonus for pattern difficulty
     core = (ball_row.core_type or "").lower()
     if difficulty >= 3 and core == "asymmetrical":
         score += 8
@@ -137,11 +158,11 @@ def _score_ball(ball_row, oil_volume: str, length_bucket: str, difficulty: int, 
     if session_type == "tournament" and (ball_row.hook_potential or 5) >= 8:
         score += 4
 
-    # Clamp to [30, 97]
-    return round(min(97.0, max(30.0, score)), 1)
+    return round(min(MAX_CONFIDENCE_SCORE, max(MIN_CONFIDENCE_SCORE, score)), 1)
 
 
 def _build_reason(ball_row, oil_volume: str, length_bucket: str, difficulty: int) -> str:
+    """Compose a plain-English explanation for why this ball was recommended."""
     cover_labels = {
         "pearl_reactive":  "pearl reactive coverstock (long skid + angular backend)",
         "hybrid_reactive": "hybrid reactive coverstock (balanced motion)",
@@ -153,29 +174,34 @@ def _build_reason(ball_row, oil_volume: str, length_bucket: str, difficulty: int
     finish = (ball_row.finish or "unknown").lower()
     core = (ball_row.core_type or "unknown").lower()
 
-    reason_parts = [
+    parts = [
         f"{ball_row.brand} {ball_row.name} features a {cover_labels.get(cover, cover)}",
         f"finished at {finish.replace('_', ' ')} for a {'longer' if 'polished' in finish else 'earlier'} breakpoint",
         f"with a {core} core (RG {ball_row.rg}, diff {ball_row.differential})",
     ]
     if oil_volume in ("heavy", "very_heavy"):
-        reason_parts.append("ideal for the heavier oil volume on this pattern")
+        parts.append("ideal for the heavier oil volume on this pattern")
     elif oil_volume == "light":
-        reason_parts.append("well-suited to the lighter oil volume on this pattern")
+        parts.append("well-suited to the lighter oil volume on this pattern")
     else:
-        reason_parts.append("a solid match for medium oil conditions")
+        parts.append("a solid match for medium oil conditions")
 
-    return " — ".join(reason_parts) + "."
+    return " — ".join(parts) + "."
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def get_recommendation(db: "DBSession", pattern_id: int, session_type: str, user_id: int):
+def get_recommendation(db: "DBSession", pattern_id: int, session_type: str, user_id: int) -> dict[str, Any]:
     """
-    Main entry point.  Queries the DB for pattern + balls, scores every
-    active non-spare ball, and returns the best pick plus alternatives.
+    Query the database for the given pattern and all active non-spare balls,
+    score every ball against the pattern conditions, and return the best pick
+    plus up to three ranked alternatives.
+
+    Returns a dict compatible with RecommendationResponse:
+      {ball_id, ball_name, brand, confidence_score, reason,
+       alternatives, pattern_name, pattern_difficulty, tip}
     """
     from sqlalchemy import text
 
@@ -201,38 +227,37 @@ def get_recommendation(db: "DBSession", pattern_id: int, session_type: str, user
     if not balls:
         raise ValueError("No active balls found in the arsenal")
 
-    # Score every ball
-    scored = []
-    for ball in balls:
-        s = _score_ball(ball, oil_volume, length_bucket, difficulty, session_type)
-        reason = _build_reason(ball, oil_volume, length_bucket, difficulty)
-        scored.append((s, ball, reason))
-
-    # Sort descending by score
-    scored.sort(key=lambda x: x[0], reverse=True)
+    # Score every ball and sort descending
+    scored: list[tuple[float, Any, str]] = sorted(
+        [(
+            _score_ball(ball, oil_volume, length_bucket, difficulty, session_type),
+            ball,
+            _build_reason(ball, oil_volume, length_bucket, difficulty),
+        ) for ball in balls],
+        key=lambda x: x[0],
+        reverse=True,
+    )
 
     best_score, best_ball, best_reason = scored[0]
 
     alternatives = [
         {
-            "ball_id": row.id,
+            "ball_id":   row.id,
             "ball_name": f"{row.brand} {row.name}",
             "confidence": s,
-            "reason": r,
+            "reason":     r,
         }
         for s, row, r in scored[1:4]  # top 3 alternatives
     ]
 
-    tip = _DIFFICULTY_TIP.get(difficulty)
-
     return {
-        "ball_id": best_ball.id,
-        "ball_name": f"{best_ball.brand} {best_ball.name}",
-        "brand": best_ball.brand,
-        "confidence_score": best_score,
-        "reason": best_reason,
-        "alternatives": alternatives,
-        "pattern_name": pattern_row.name,
+        "ball_id":            best_ball.id,
+        "ball_name":          f"{best_ball.brand} {best_ball.name}",
+        "brand":              best_ball.brand,
+        "confidence_score":   best_score,
+        "reason":             best_reason,
+        "alternatives":       alternatives,
+        "pattern_name":       pattern_row.name,
         "pattern_difficulty": difficulty,
-        "tip": tip,
+        "tip":                _DIFFICULTY_TIP.get(difficulty),
     }

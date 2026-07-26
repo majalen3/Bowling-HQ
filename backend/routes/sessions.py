@@ -1,18 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import date
 
 from database.postgres import get_db
 from models.session import Session as SessionModel, SessionCreate
+from constants import DEFAULT_USER_ID
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
-DEFAULT_USER = 1
-
 
 @router.get("/", response_model=list[SessionModel])
-def list_sessions(user_id: int = DEFAULT_USER, db: Session = Depends(get_db)):
+def list_sessions(user_id: int = DEFAULT_USER_ID, db: Session = Depends(get_db)):
     """Return all sessions for a user."""
     rows = db.execute(
         text("SELECT * FROM bowling_sessions WHERE user_id = :uid ORDER BY session_date DESC"),

@@ -3,14 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from database.postgres import get_db
+from constants import DEFAULT_USER_ID
 
 router = APIRouter(prefix="/ghost-bowler", tags=["Ghost Bowler"])
 
-DEFAULT_USER = 1
-
 
 @router.get("/profile")
-def get_profile(user_id: int = DEFAULT_USER, db: Session = Depends(get_db)):
+def get_profile(user_id: int = DEFAULT_USER_ID, db: Session = Depends(get_db)):
     """Return the Ghost Bowler profile summary for a user."""
     user = db.execute(
         text("SELECT * FROM users WHERE id = :uid"), {"uid": user_id}

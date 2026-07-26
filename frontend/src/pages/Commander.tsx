@@ -49,7 +49,7 @@ export default function Commander() {
             <select
               className="select-input"
               value={patternId}
-              onChange={(e) => setPatternId(Number(e.target.value) || '')}
+              onChange={(e) => setPatternId(e.target.value ? Number(e.target.value) : '')}
               required
             >
               <option value="">— Select a pattern —</option>
