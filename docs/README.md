@@ -6,6 +6,8 @@ This directory contains all Bowling-HQ documentation, split from the original RE
 
 - **[Quick Start](00_QUICK_START.md)** - Get started in 2 minutes
 - **[Complete Index](INDEX.md)** - All documentation with links
+- **[Bowling Physics Guide](BOWLING_PHYSICS_GUIDE.md)** - Physics and prediction baseline
+- **[Physics Integration Specs](PHYSICS_INTEGRATION_SPECS.md)** - Cross-system interface contracts
 
 ## Documentation Files
 
