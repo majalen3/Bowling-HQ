@@ -14,7 +14,13 @@ afterEach(() => {
 
 describe('App', () => {
   it('renders dashboard and runs session workflow', async () => {
-    const sessions = [
+    const sessions: Array<{
+      id: string;
+      session_type: string;
+      location_name: string | null;
+      started_at: string;
+      completed_at: string | null;
+    }> = [
       {
         id: 'session-1',
         session_type: 'practice',
@@ -103,7 +109,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start session' }));
     await screen.findByText('Sessions: 2 total / 0 completed / 2 active');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Mark complete' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Mark complete' })[0]);
     await waitFor(() => {
       expect(
         screen.getByText('Sessions: 2 total / 1 completed / 1 active'),

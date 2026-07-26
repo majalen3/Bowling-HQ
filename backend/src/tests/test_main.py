@@ -6,7 +6,10 @@ from fastapi.testclient import TestClient
 
 from src.config import Settings
 from src.main import app
-from src.models.session_progress import SessionCreateRequest, SessionProgressItem
+from src.models.session_progress import (
+    SessionCreateRequest,
+    SessionProgressItem,
+)
 
 client = TestClient(app)
 
@@ -45,7 +48,9 @@ class FakeSessionRepository:
 
 
 @pytest.fixture
-def fake_session_repo(monkeypatch: pytest.MonkeyPatch) -> FakeSessionRepository:
+def fake_session_repo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> FakeSessionRepository:
     fake = FakeSessionRepository()
     monkeypatch.setattr(
         "src.services.session_progress.get_session_repository",
@@ -85,7 +90,9 @@ def test_progress_endpoint_returns_board_snapshot(
     assert payload["scope_lock"]
     assert payload["release_gate"]
     assert payload["board"]
-    slice_item = next(item for item in payload["board"] if item["id"] == "MVP-004")
+    slice_item = next(
+        item for item in payload["board"] if item["id"] == "MVP-004"
+    )
     assert slice_item["status"] == "backlog"
     assert "Slice 1 sessions completed: 0/0" in slice_item["done_criteria"]
     statuses = {item["status"] for item in payload["board"]}
@@ -126,7 +133,10 @@ def test_session_progress_workflow_updates_progress(
         item for item in updated_board if item["id"] == "MVP-004"
     )
     assert updated_mvp_004["status"] == "done"
-    assert "Slice 1 sessions completed: 1/1" in updated_mvp_004["done_criteria"]
+    assert (
+        "Slice 1 sessions completed: 1/1"
+        in updated_mvp_004["done_criteria"]
+    )
 
 
 def test_complete_missing_session_returns_not_found(

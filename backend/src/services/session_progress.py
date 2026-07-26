@@ -21,7 +21,10 @@ DEMO_USER_NAME = "Demo User"
 
 
 class SessionProgressRepository(Protocol):
-    def create_session(self, payload: SessionCreateRequest) -> SessionProgressItem:
+    def create_session(
+        self,
+        payload: SessionCreateRequest,
+    ) -> SessionProgressItem:
         ...
 
     def complete_session(self, session_id: UUID) -> SessionProgressItem:
@@ -35,7 +38,10 @@ class PostgresSessionProgressRepository:
     def __init__(self, postgres_url: str) -> None:
         self.postgres_url = postgres_url
 
-    def create_session(self, payload: SessionCreateRequest) -> SessionProgressItem:
+    def create_session(
+        self,
+        payload: SessionCreateRequest,
+    ) -> SessionProgressItem:
         session_id = uuid4()
         started_at = datetime.now(timezone.utc)
         with connect(self.postgres_url, row_factory=dict_row) as connection:
