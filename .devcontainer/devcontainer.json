@@ -1,0 +1,23 @@
+{
+  "name": "Bowling-HQ (runs full stack via `make dev` on startup)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    }
+  },
+  "forwardPorts": [5173, 8000],
+  "portsAttributes": {
+    "5173": {
+      "label": "Frontend",
+      "onAutoForward": "openBrowser"
+    },
+    "8000": {
+      "label": "Backend API"
+    }
+  },
+  "postStartCommand": "make dev",
+  "waitFor": "postStartCommand"
+}
