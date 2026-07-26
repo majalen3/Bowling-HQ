@@ -6,6 +6,7 @@ import { ArsenalPage } from './pages/ArsenalPage';
 import { AuthPage } from './pages/AuthPage';
 import { CommanderPage } from './pages/CommanderPage';
 import { DevPage } from './pages/DevPage';
+import { HomePage } from './pages/HomePage';
 import { SessionsPage } from './pages/SessionsPage';
 
 export function App() {
@@ -13,7 +14,8 @@ export function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<CommanderPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/commander" element={<CommanderPage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/arsenal" element={<ArsenalPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
