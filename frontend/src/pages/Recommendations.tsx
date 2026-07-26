@@ -58,7 +58,7 @@ export default function Recommendations() {
               className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
             >
               {OIL_OPTIONS.map(o => (
-                <option key={o} value={o}>{o.replace('_', ' ')}</option>
+                <option key={o} value={o}>{o.replaceAll('_', ' ')}</option>
               ))}
             </select>
           </div>

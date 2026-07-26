@@ -53,7 +53,7 @@ _OIL_TO_CONDITION: dict[str, list[str]] = {
 }
 
 
-def _normalise(value: float, low: float, high: float) -> float:
+def _normalize(value: float, low: float, high: float) -> float:
     """Return 0–1 how well value fits within [low, high], degrading outside."""
     if low <= value <= high:
         return 1.0
@@ -72,25 +72,25 @@ def _score_ball(ball: BowlingBall, oil_volume: str, length_feet: int | None) -> 
     # Hook match
     hook_low, hook_high = _OIL_HOOK_IDEAL.get(oil, (5.0, 8.0))
     hp = float(ball.hook_potential) if ball.hook_potential is not None else 5.0
-    hook_match = _normalise(hp, hook_low, hook_high)
+    hook_match = _normalize(hp, hook_low, hook_high)
 
     # Length match — longer patterns prefer higher length_score
     ls = float(ball.length_score) if ball.length_score is not None else 5.0
     if length_feet is not None:
         # Patterns 40+ ft → prefer length_score 6+; shorter → prefer 5-
         ideal_ls_mid = (length_feet - 30) / 2.0  # rough mapping to 0–10
-        length_match = _normalise(ls, ideal_ls_mid - 1.5, ideal_ls_mid + 1.5)
+        length_match = _normalize(ls, ideal_ls_mid - 1.5, ideal_ls_mid + 1.5)
     else:
         length_match = 0.5  # neutral when unknown
 
     # Backend match — drier lanes reward stronger backend
     bs = float(ball.backend_score) if ball.backend_score is not None else 5.0
     if oil in ("dry", "light"):
-        backend_match = _normalise(bs, 5.0, 10.0)
+        backend_match = _normalize(bs, 5.0, 10.0)
     elif oil in ("heavy", "very_heavy"):
-        backend_match = _normalise(bs, 0.0, 6.0)
+        backend_match = _normalize(bs, 0.0, 6.0)
     else:
-        backend_match = _normalise(bs, 4.0, 8.0)
+        backend_match = _normalize(bs, 4.0, 8.0)
 
     return {
         "condition_match": condition_match,

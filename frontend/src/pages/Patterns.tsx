@@ -52,7 +52,7 @@ export default function Patterns() {
                   </span>
                 </td>
                 <td className={`px-4 py-3 font-medium ${OIL_COLORS[p.oil_volume] ?? 'text-gray-300'}`}>
-                  {p.oil_volume.replace('_', ' ')}
+                  {p.oil_volume.replaceAll('_', ' ')}
                 </td>
                 <td className="px-4 py-3 text-gray-300">{p.length_feet ?? '—'}</td>
                 <td className="px-4 py-3">
