@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.main import app
-from src.services.auth import hash_password
+from src.services.auth import hash_password, verify_password
 
 client = TestClient(app)
 
@@ -113,3 +113,10 @@ def test_login_with_wrong_password(
         json={"email": "login2@example.com", "password": "wrongpass"},
     )
     assert response.status_code == 401
+
+
+def test_hash_password_round_trip() -> None:
+    password_hash = hash_password("supersecret")
+
+    assert password_hash != "supersecret"
+    assert verify_password("supersecret", password_hash)
