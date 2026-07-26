@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import Protocol
 from uuid import UUID, uuid4
 
-from psycopg import connect
+from psycopg import Connection, connect
 from psycopg.rows import dict_row
 
 from src.config import get_settings
@@ -107,7 +107,7 @@ class PostgresSessionProgressRepository:
             for row in rows
         ]
 
-    def _ensure_demo_user(self, connection: object) -> None:
+    def _ensure_demo_user(self, connection: Connection) -> None:
         with connection.cursor() as cursor:
             cursor.execute(
                 """

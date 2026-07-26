@@ -29,7 +29,7 @@ describe('App', () => {
         completed_at: null,
       },
     ];
-    const fetchMock = jest.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+    const mockFetch = jest.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const requestUrl = String(input);
       if (requestUrl.endsWith('/sessions/progress')) {
         return Promise.resolve({
@@ -93,7 +93,7 @@ describe('App', () => {
     });
 
     Object.defineProperty(global, 'fetch', {
-      value: fetchMock,
+      value: mockFetch,
       configurable: true,
       writable: true,
     });

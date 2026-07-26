@@ -16,10 +16,13 @@ def get_progress_snapshot() -> ProgressSnapshot:
             continue
         if session_snapshot.total_sessions == 0:
             item["status"] = "backlog"
-        elif session_snapshot.completed_sessions == 0:
-            item["status"] = "in_progress"
-        else:
+        elif (
+            session_snapshot.completed_sessions
+            == session_snapshot.total_sessions
+        ):
             item["status"] = "done"
+        else:
+            item["status"] = "in_progress"
         item["done_criteria"] = [
             criterion
             for criterion in item["done_criteria"]
