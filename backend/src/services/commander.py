@@ -71,12 +71,14 @@ def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
     ball_length = length if length is not None else 5
     # Faster ball speeds benefit from more length to avoid over/under
     # reacting early. See the module-level constants for the mapping.
-    speed_delta = ball_speed - BALL_SPEED_FLOOR_MPH
     target_length = min(
         MAX_LENGTH_RATING,
         max(
             1,
-            round(speed_delta / SPEED_TO_LENGTH_DIVISOR),
+            round(
+                (ball_speed - BALL_SPEED_FLOOR_MPH)
+                / SPEED_TO_LENGTH_DIVISOR,
+            ),
         ),
     )
     distance = abs(ball_length - target_length)

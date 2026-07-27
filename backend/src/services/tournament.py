@@ -397,7 +397,7 @@ def recommend_lineup(
         )
 
     if len(scored) > 1:
-        _, spare_reasoning, spare_row = spare_candidate
+        spare_score, spare_reasoning, spare_row = spare_candidate
         recommendations.append(
             LineupRecommendation(
                 user_arsenal_id=spare_row["user_arsenal_id"],
