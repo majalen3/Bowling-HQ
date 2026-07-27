@@ -27,5 +27,7 @@ jobs:
         run: |
           set -eu
           echo "Approving run ${{ github.event.workflow_run.id }} in ${{ github.repository }}"
-          gh run approve ${{ github.event.workflow_run.id }} --repo ${{ github.repository }}
+          gh api \
+            --method POST \
+            /repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/approve
           echo "Approval request submitted."
