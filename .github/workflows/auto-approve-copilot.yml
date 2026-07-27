@@ -1,4 +1,4 @@
-name: Auto-approve GitHub Copilot workflow runs
+name: Auto-approve GitHub Copilot CI runs
 
 on:
   workflow_run:
@@ -13,9 +13,9 @@ permissions:
 
 jobs:
   approve:
-    # 198982749 is the GitHub user ID for the @copilot app account.
-    # Verify via https://api.github.com/users/copilot if this actor changes.
-    if: ${{ github.event.workflow_run.actor.id == 198982749 && github.event.workflow_run.actor.type == 'Bot' }}
+    # 198982749 is the stable GitHub user ID for the @copilot app account.
+    # If GitHub ever changes this actor, verify via https://api.github.com/users/copilot and update this guard.
+    if: ${{ github.event.workflow_run.actor.id == 198982749 && github.event.workflow_run.actor.type == 'Bot' && (github.event.workflow_run.actor.login == 'Copilot' || github.event.workflow_run.actor.login == 'copilot') }}
     runs-on: ubuntu-latest
     steps:
       - name: Approve Copilot-triggered CI run
