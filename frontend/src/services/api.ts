@@ -1,14 +1,35 @@
-import type { ArsenalAddInput, ArsenalItem, BowlingBall } from '../types/arsenal';
-import type { CommanderRequestInput, CommanderResponse } from '../types/commander';
 import type { ApiConfig } from '../types/env';
-import type { GhostBowlerProfile } from '../types/ghostBowler';
-import type { LanePattern, LanePatternDetail } from '../types/patterns';
 import type { ProgressSnapshot } from '../types/progress';
 import type {
   SessionCreateInput,
   SessionProgressItem,
   SessionProgressSnapshot,
 } from '../types/sessionProgress';
+import type {
+  FramesResponse,
+  GamesResponse,
+  ScoreImportResult,
+} from '../types/games';
+import type {
+  ArsenalResponse,
+  BallItem,
+  CreateAndAddBallRequest,
+  UserArsenalBall,
+} from '../types/arsenal';
+import type {
+  RecommendationRequest,
+  RecommendationResponse,
+} from '../types/recommendations';
+import type { AnalyticsSummary } from '../types/analytics';
+import type {
+  Token,
+  UserCreate,
+  UserLogin,
+  UserResponse,
+} from '../types/auth';
+import type { CommanderRequestInput, CommanderResponse } from '../types/commander';
+import type { GhostBowlerProfile } from '../types/ghostBowler';
+import type { LanePattern, LanePatternDetail } from '../types/patterns';
 import type {
   LineupBall,
   LineupBallAddInput,
@@ -80,63 +101,155 @@ export async function completeSession(
   return (await response.json()) as SessionProgressItem;
 }
 
-// --- Arsenal DNA ---
-
-export async function fetchBallCatalog(filters?: {
-  oil_condition?: string;
-  coverstock_type?: string;
-}): Promise<BowlingBall[]> {
-  const params = new URLSearchParams();
-  if (filters?.oil_condition) {
-    params.set('oil_condition', filters.oil_condition);
-  }
-  if (filters?.coverstock_type) {
-    params.set('coverstock_type', filters.coverstock_type);
-  }
-  const query = params.toString();
+export async function fetchSessionGames(
+  sessionId: string,
+): Promise<GamesResponse> {
   const response = await fetch(
-    `${apiConfig.baseUrl}/arsenal/catalog${query ? `?${query}` : ''}`,
+    `${apiConfig.baseUrl}/sessions/${sessionId}/games`,
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to load ball catalog (${response.status})`);
+    throw new Error(`Failed to load games (${response.status})`);
   }
 
-  return (await response.json()) as BowlingBall[];
+  return (await response.json()) as GamesResponse;
 }
 
-export async function fetchUserArsenal(): Promise<ArsenalItem[]> {
+export async function addGamesToSession(
+  sessionId: string,
+  scores: number[],
+): Promise<GamesResponse> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/sessions/${sessionId}/games`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ scores }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to add games (${response.status})`);
+  }
+
+  return (await response.json()) as GamesResponse;
+}
+
+export async function addGameFromThrows(
+  sessionId: string,
+  throws: number[],
+): Promise<FramesResponse> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/sessions/${sessionId}/games/from-throws`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ throws }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to add game from throws (${response.status})`);
+  }
+
+  return (await response.json()) as FramesResponse;
+}
+
+export async function fetchGameFrames(
+  sessionId: string,
+  gameId: string,
+): Promise<FramesResponse> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/sessions/${sessionId}/games/${gameId}/frames`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to load frames (${response.status})`);
+  }
+
+  return (await response.json()) as FramesResponse;
+}
+
+export async function importScores(
+  sessionId: string,
+  csvText: string,
+  source: string,
+): Promise<ScoreImportResult> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/sessions/${sessionId}/import-scores`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ csv_text: csvText, source }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to import scores (${response.status})`);
+  }
+
+  return (await response.json()) as ScoreImportResult;
+}
+
+// --- Arsenal DNA ---
+
+export async function fetchArsenal(): Promise<ArsenalResponse> {
   const response = await fetch(`${apiConfig.baseUrl}/arsenal`);
 
   if (!response.ok) {
     throw new Error(`Failed to load arsenal (${response.status})`);
   }
 
-  return (await response.json()) as ArsenalItem[];
+  return (await response.json()) as ArsenalResponse;
 }
 
-export async function addToArsenal(payload: ArsenalAddInput): Promise<ArsenalItem> {
+export async function addBallToArsenal(
+  payload: CreateAndAddBallRequest,
+): Promise<UserArsenalBall> {
   const response = await fetch(`${apiConfig.baseUrl}/arsenal`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to add ball to arsenal (${response.status})`);
+    throw new Error(`Failed to add ball (${response.status})`);
   }
 
-  return (await response.json()) as ArsenalItem;
+  return (await response.json()) as UserArsenalBall;
 }
 
-export async function removeFromArsenal(userArsenalId: string): Promise<void> {
-  const response = await fetch(`${apiConfig.baseUrl}/arsenal/${userArsenalId}`, {
-    method: 'DELETE',
-  });
+export async function removeBallFromArsenal(
+  arsenalId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/arsenal/${arsenalId}`,
+    {
+      method: 'DELETE',
+    },
+  );
 
   if (!response.ok) {
-    throw new Error(`Failed to remove ball from arsenal (${response.status})`);
+    throw new Error(`Failed to remove ball (${response.status})`);
   }
+}
+
+export async function fetchBallCatalog(): Promise<BallItem[]> {
+  const response = await fetch(`${apiConfig.baseUrl}/arsenal/catalog`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load catalog (${response.status})`);
+  }
+
+  return (await response.json()) as BallItem[];
 }
 
 // --- Commander AI ---
@@ -293,3 +406,73 @@ export async function fetchGhostBowlerProfile(): Promise<GhostBowlerProfile> {
   return (await response.json()) as GhostBowlerProfile;
 }
 
+// --- Recommendations (physics-based) ---
+
+export async function getOpeningBallRecommendation(
+  payload: RecommendationRequest,
+): Promise<RecommendationResponse> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/recommendations/opening-ball`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to get recommendation (${response.status})`);
+  }
+
+  return (await response.json()) as RecommendationResponse;
+}
+
+// --- Analytics ---
+
+export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
+  const response = await fetch(`${apiConfig.baseUrl}/analytics/summary`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load analytics (${response.status})`);
+  }
+
+  return (await response.json()) as AnalyticsSummary;
+}
+
+// --- Auth ---
+
+export async function registerUser(
+  payload: UserCreate,
+): Promise<UserResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to register (${response.status})`);
+  }
+
+  return (await response.json()) as UserResponse;
+}
+
+export async function loginUser(payload: UserLogin): Promise<Token> {
+  const response = await fetch(`${apiConfig.baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to login (${response.status})`);
+  }
+
+  return (await response.json()) as Token;
+}

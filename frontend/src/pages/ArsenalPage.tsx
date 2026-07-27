@@ -1,191 +1,268 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
-  addToArsenal,
+  addBallToArsenal,
+  fetchArsenal,
   fetchBallCatalog,
-  fetchUserArsenal,
-  removeFromArsenal,
+  removeBallFromArsenal,
 } from '../services/api';
-import type { ArsenalItem, BowlingBall } from '../types/arsenal';
+import type {
+  ArsenalResponse,
+  BallItem,
+  CreateAndAddBallRequest,
+} from '../types/arsenal';
 
-type Tab = 'arsenal' | 'catalog';
-
-const OIL_CONDITIONS = ['dry', 'light', 'medium', 'heavy', 'very_heavy', 'any'];
-const COVERSTOCK_TYPES = ['plastic', 'urethane', 'reactive_resin', 'pearl_reactive'];
-
-function BallCard({ ball, children }: { ball: BowlingBall; children?: React.ReactNode }) {
-  return (
-    <div className="card">
-      <p className="eyebrow">{ball.brand}</p>
-      <h2>{ball.name}</h2>
-      <p className="subtext">{ball.description}</p>
-      <ul>
-        <li>Coverstock: {ball.coverstock_type.replace('_', ' ')}</li>
-        <li>Core: {ball.core_type}</li>
-        <li>Oil condition: {ball.oil_condition ?? 'n/a'}</li>
-        <li>Hook potential: {ball.hook_potential ?? '—'}/10</li>
-        <li>Length: {ball.length ?? '—'}/10</li>
-        <li>Backend: {ball.backend ?? '—'}/10</li>
-        <li>RG: {ball.rg ?? '—'} | Diff: {ball.differential ?? '—'}</li>
-        <li>Weights: {ball.weight_options ?? '—'}</li>
-      </ul>
-      {children}
-    </div>
-  );
-}
+const EMPTY_FORM: CreateAndAddBallRequest = {
+  name: '',
+  brand: '',
+  coverstock: 'solid reactive',
+  rg: 2.5,
+  differential: 0.04,
+  mass_bias: 0.0,
+  surface_grit: 3000,
+  weight_lbs: 15,
+  notes: '',
+};
 
 export function ArsenalPage() {
-  const [tab, setTab] = useState<Tab>('arsenal');
-  const [arsenal, setArsenal] = useState<ArsenalItem[] | null>(null);
-  const [catalog, setCatalog] = useState<BowlingBall[] | null>(null);
-  const [oilFilter, setOilFilter] = useState('');
-  const [coverstockFilter, setCoverstockFilter] = useState('');
+  const [arsenal, setArsenal] = useState<ArsenalResponse | null>(null);
+  const [catalog, setCatalog] = useState<BallItem[]>([]);
+  const [form, setForm] = useState<CreateAndAddBallRequest>(EMPTY_FORM);
+  const [selectedCatalogId, setSelectedCatalogId] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isBusy, setIsBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const loadArsenal = async (): Promise<void> => {
     try {
-      setArsenal(await fetchUserArsenal());
+      const [arsenalData, catalogData] = await Promise.all([
+        fetchArsenal(),
+        fetchBallCatalog(),
+      ]);
+      setArsenal(arsenalData);
+      setCatalog(catalogData);
+      setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load arsenal');
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'Failed to load arsenal',
+      );
     }
   };
-
-  const loadCatalog = useCallback(async (): Promise<void> => {
-    try {
-      setCatalog(
-        await fetchBallCatalog({
-          oil_condition: oilFilter || undefined,
-          coverstock_type: coverstockFilter || undefined,
-        }),
-      );
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load catalog');
-    }
-  }, [oilFilter, coverstockFilter]);
 
   useEffect(() => {
     loadArsenal();
   }, []);
 
-  useEffect(() => {
-    loadCatalog();
-  }, [loadCatalog]);
-
-  const ownedBallIds = useMemo(
-    () => new Set((arsenal ?? []).map((item) => item.ball_id)),
-    [arsenal],
-  );
-
-  const onAdd = async (ballId: string): Promise<void> => {
-    setIsBusy(true);
-    try {
-      await addToArsenal({ ball_id: ballId });
-      await loadArsenal();
-      setError(null);
-    } catch (addError) {
-      setError(addError instanceof Error ? addError.message : 'Failed to add ball');
-    } finally {
-      setIsBusy(false);
+  const onSelectCatalog = (ballId: string): void => {
+    setSelectedCatalogId(ballId);
+    const ball = catalog.find((item) => item.id === ballId);
+    if (ball) {
+      setForm({
+        name: ball.name,
+        brand: ball.brand,
+        coverstock: ball.coverstock,
+        rg: ball.rg,
+        differential: ball.differential,
+        mass_bias: ball.mass_bias,
+        surface_grit: ball.surface_grit,
+        weight_lbs: ball.weight_lbs,
+        notes: '',
+      });
     }
   };
 
-  const onRemove = async (userArsenalId: string): Promise<void> => {
-    setIsBusy(true);
+  const updateForm = (
+    key: keyof CreateAndAddBallRequest,
+    value: string,
+  ): void => {
+    const numericKeys: Array<keyof CreateAndAddBallRequest> = [
+      'rg',
+      'differential',
+      'mass_bias',
+      'surface_grit',
+      'weight_lbs',
+    ];
+    setForm((prev) => ({
+      ...prev,
+      [key]: numericKeys.includes(key) ? Number(value) : value,
+    }));
+  };
+
+  const onAddBall = async (): Promise<void> => {
+    if (!form.name.trim() || !form.brand.trim()) {
+      setError('Ball name and brand are required');
+      return;
+    }
+    setBusy(true);
     try {
-      await removeFromArsenal(userArsenalId);
+      await addBallToArsenal(form);
+      setForm(EMPTY_FORM);
+      setSelectedCatalogId('');
       await loadArsenal();
       setError(null);
-    } catch (removeError) {
-      setError(removeError instanceof Error ? removeError.message : 'Failed to remove ball');
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Failed to add ball',
+      );
     } finally {
-      setIsBusy(false);
+      setBusy(false);
+    }
+  };
+
+  const onRemove = async (arsenalId: string): Promise<void> => {
+    setBusy(true);
+    try {
+      await removeBallFromArsenal(arsenalId);
+      await loadArsenal();
+    } catch (removeError) {
+      setError(
+        removeError instanceof Error
+          ? removeError.message
+          : 'Failed to remove ball',
+      );
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <main className="app-shell">
-      <section className="phone-frame">
-        <header className="hero">
-          <p className="eyebrow">Arsenal DNA</p>
-          <h1>Ball Arsenal</h1>
-          <p className="subtext">Browse the catalog and manage your personal arsenal.</p>
-        </header>
-        {error && <p role="alert">{error}</p>}
-        <div className="stack">
-          <div className="card">
-            <button type="button" onClick={() => setTab('arsenal')} disabled={tab === 'arsenal'}>
-              My Arsenal
-            </button>
-            <button type="button" onClick={() => setTab('catalog')} disabled={tab === 'catalog'}>
-              Ball Catalog
-            </button>
-          </div>
+    <section className="stack">
+      <header className="hero">
+        <p className="eyebrow">Arsenal</p>
+        <h1>Your Bowling Bag</h1>
+        <p className="subtext">
+          Manage the balls Commander AI can recommend from.
+        </p>
+      </header>
 
-          {tab === 'arsenal' && (
-            <div className="stack">
-              {!arsenal && <p>Loading arsenal…</p>}
-              {arsenal && arsenal.length === 0 && (
-                <p className="subtext">No balls in your arsenal yet. Add some from the catalog.</p>
-              )}
-              {arsenal?.map((item) => (
-                <BallCard key={item.id} ball={item.ball}>
-                  <p className="subtext">Layout: {item.layout ?? 'n/a'}</p>
-                  <p className="subtext">Games played: {item.games_played}</p>
-                  <button type="button" onClick={() => onRemove(item.id)} disabled={isBusy}>
-                    Remove from arsenal
-                  </button>
-                </BallCard>
-              ))}
-            </div>
-          )}
+      {error && <p role="alert">{error}</p>}
 
-          {tab === 'catalog' && (
-            <div className="stack">
-              <div className="card">
-                <label htmlFor="oilFilter">Oil condition</label>
-                <select
-                  id="oilFilter"
-                  value={oilFilter}
-                  onChange={(event) => setOilFilter(event.target.value)}
-                >
-                  <option value="">All</option>
-                  {OIL_CONDITIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option.replace('_', ' ')}
-                    </option>
-                  ))}
-                </select>
-                <label htmlFor="coverstockFilter">Coverstock</label>
-                <select
-                  id="coverstockFilter"
-                  value={coverstockFilter}
-                  onChange={(event) => setCoverstockFilter(event.target.value)}
-                >
-                  <option value="">All</option>
-                  {COVERSTOCK_TYPES.map((option) => (
-                    <option key={option} value={option}>
-                      {option.replace('_', ' ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {!catalog && <p>Loading catalog…</p>}
-              {catalog?.map((ball) => (
-                <BallCard key={ball.id} ball={ball}>
-                  {ownedBallIds.has(ball.id) ? (
-                    <p className="subtext">Already in your arsenal</p>
-                  ) : (
-                    <button type="button" onClick={() => onAdd(ball.id)} disabled={isBusy}>
-                      Add to arsenal
-                    </button>
-                  )}
-                </BallCard>
-              ))}
-            </div>
-          )}
+      <section className="card">
+        <h2>Add a Ball</h2>
+        <div className="form-group">
+          <label htmlFor="catalogSelect">Pick from catalog</label>
+          <select
+            id="catalogSelect"
+            value={selectedCatalogId}
+            onChange={(event) => onSelectCatalog(event.target.value)}
+          >
+            <option value="">— Manual entry —</option>
+            {catalog.map((ball) => (
+              <option key={ball.id} value={ball.id}>
+                {ball.name} ({ball.coverstock})
+              </option>
+            ))}
+          </select>
         </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="ballName">Name</label>
+            <input
+              id="ballName"
+              value={form.name}
+              onChange={(event) => updateForm('name', event.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ballBrand">Brand</label>
+            <input
+              id="ballBrand"
+              value={form.brand}
+              onChange={(event) => updateForm('brand', event.target.value)}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="ballCover">Coverstock</label>
+          <select
+            id="ballCover"
+            value={form.coverstock}
+            onChange={(event) => updateForm('coverstock', event.target.value)}
+          >
+            <option value="solid reactive">Solid reactive</option>
+            <option value="hybrid reactive">Hybrid reactive</option>
+            <option value="pearl reactive">Pearl reactive</option>
+            <option value="urethane">Urethane</option>
+            <option value="plastic">Plastic</option>
+          </select>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="ballRg">RG</label>
+            <input
+              id="ballRg"
+              type="number"
+              step="0.01"
+              value={form.rg}
+              onChange={(event) => updateForm('rg', event.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ballDiff">Differential</label>
+            <input
+              id="ballDiff"
+              type="number"
+              step="0.001"
+              value={form.differential}
+              onChange={(event) =>
+                updateForm('differential', event.target.value)
+              }
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="ballGrit">Surface Grit</label>
+            <input
+              id="ballGrit"
+              type="number"
+              value={form.surface_grit}
+              onChange={(event) =>
+                updateForm('surface_grit', event.target.value)
+              }
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="ballNotes">Notes</label>
+          <input
+            id="ballNotes"
+            value={form.notes ?? ''}
+            onChange={(event) => updateForm('notes', event.target.value)}
+          />
+        </div>
+        <button type="button" onClick={onAddBall} disabled={busy}>
+          Add Ball
+        </button>
       </section>
-    </main>
+
+      <section className="card">
+        <h2>My Balls ({arsenal?.count ?? 0})</h2>
+        {arsenal && arsenal.balls.length === 0 && (
+          <p className="subtext">No balls yet. Add one above.</p>
+        )}
+        {arsenal?.balls.map((entry) => (
+          <article className="ball-card" key={entry.id}>
+            <div className="ball-card-head">
+              <strong>{entry.ball.name}</strong>
+              <span className="subtext">{entry.ball.brand}</span>
+            </div>
+            <p className="subtext">
+              {entry.ball.coverstock} · RG {entry.ball.rg} · Diff{' '}
+              {entry.ball.differential} · {entry.ball.surface_grit} grit
+            </p>
+            {entry.notes && <p className="subtext">{entry.notes}</p>}
+            <button
+              type="button"
+              onClick={() => onRemove(entry.id)}
+              disabled={busy}
+            >
+              Remove
+            </button>
+          </article>
+        ))}
+      </section>
+    </section>
   );
 }

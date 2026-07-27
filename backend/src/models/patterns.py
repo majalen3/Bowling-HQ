@@ -4,23 +4,20 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from src.models.arsenal import BowlingBall
+from src.models.arsenal import BallItem
 
 
 class LanePattern(BaseModel):
     id: UUID
     name: str
-    pattern_type: str
-    oil_volume: Optional[int] = None
-    oil_distance: Optional[int] = None
-    difficulty: Optional[int] = None
-    description: Optional[str] = None
-    recommended_coverstock: Optional[str] = None
-    recommended_hook_min: Optional[int] = None
-    recommended_hook_max: Optional[int] = None
-    notes: Optional[str] = None
+    length_ft: float
+    volume_ml: float
+    asymmetry_index: float = 0.0
+    front_oil_pct: float = 0.34
+    mid_oil_pct: float = 0.33
+    backend_oil_pct: float = 0.33
     created_at: datetime
 
 
 class LanePatternDetail(LanePattern):
-    recommended_balls: list[BowlingBall] = []
+    recommended_balls: list[BallItem] = []

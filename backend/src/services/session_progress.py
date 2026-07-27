@@ -113,11 +113,18 @@ class PostgresSessionProgressRepository:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO users (id, email, display_name)
-                VALUES (%s, %s, %s)
+                INSERT INTO users (
+                    id, email, display_name, password_hash
+                )
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (id) DO NOTHING
                 """,
-                (DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME),
+                (
+                    DEMO_USER_ID,
+                    DEMO_USER_EMAIL,
+                    DEMO_USER_NAME,
+                    "demo",
+                ),
             )
 
 

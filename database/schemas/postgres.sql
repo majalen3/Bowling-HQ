@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     display_name VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,69 +25,95 @@ CREATE TABLE IF NOT EXISTS games (
     UNIQUE (session_id, game_number)
 );
 
--- Feature: Arsenal DNA
+CREATE TABLE IF NOT EXISTS bowling_centers (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    city VARCHAR(100),
+    state VARCHAR(50),
+    lane_surface VARCHAR(50) DEFAULT 'synthetic',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS lane_patterns (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    length_ft NUMERIC(5,2) NOT NULL,
+    volume_ml NUMERIC(5,2) NOT NULL,
+    asymmetry_index NUMERIC(4,3) NOT NULL DEFAULT 0.0,
+    front_oil_pct NUMERIC(4,3) NOT NULL DEFAULT 0.34,
+    mid_oil_pct NUMERIC(4,3) NOT NULL DEFAULT 0.33,
+    backend_oil_pct NUMERIC(4,3) NOT NULL DEFAULT 0.33,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS bowling_balls (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
     brand VARCHAR(100) NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    coverstock_type VARCHAR(50) NOT NULL, -- 'plastic', 'urethane', 'reactive_resin', 'pearl_reactive'
-    core_type VARCHAR(50) NOT NULL,       -- 'symmetrical', 'asymmetrical'
-    rg DECIMAL(4,2),                      -- 2.40 to 2.80
-    differential DECIMAL(4,3),            -- 0.010 to 0.060
-    hook_potential INTEGER,               -- 1-10
-    length INTEGER,                       -- 1-10 (1=early, 10=long)
-    backend INTEGER,                      -- 1-10
-    oil_condition VARCHAR(50),            -- 'dry', 'light', 'medium', 'heavy', 'very_heavy'
-    weight_options VARCHAR(100),          -- e.g. '12,14,15,16'
-    description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    coverstock VARCHAR(100) NOT NULL,
+    rg NUMERIC(4,3) NOT NULL,
+    differential NUMERIC(5,4) NOT NULL,
+    mass_bias NUMERIC(5,4) NOT NULL DEFAULT 0.0,
+    surface_grit INTEGER NOT NULL DEFAULT 3000,
+    weight_lbs INTEGER NOT NULL DEFAULT 15,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS user_arsenal (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
     ball_id UUID NOT NULL REFERENCES bowling_balls(id),
-    purchase_date DATE,
-    layout VARCHAR(100),
     notes TEXT,
-    games_played INTEGER DEFAULT 0,
-    added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, ball_id)
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (user_id, ball_id)
 );
 
--- Feature: Pattern Intelligence
-CREATE TABLE IF NOT EXISTS lane_patterns (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(200) NOT NULL,
-    pattern_type VARCHAR(50) NOT NULL,    -- 'house', 'sport', 'challenge', 'pba'
-    oil_volume INTEGER,                   -- milliliters, e.g. 25
-    oil_distance INTEGER,                 -- feet, e.g. 40
-    difficulty INTEGER,                   -- 1-4 (1=easy house, 4=ultra)
-    description TEXT,
-    recommended_coverstock VARCHAR(50),   -- 'plastic', 'urethane', 'reactive_resin', 'pearl_reactive'
-    recommended_hook_min INTEGER,
-    recommended_hook_max INTEGER,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS frames (
+    id UUID PRIMARY KEY,
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    frame_number INTEGER NOT NULL CHECK (frame_number BETWEEN 1 AND 10),
+    ball1 INTEGER NOT NULL,
+    ball2 INTEGER,
+    ball3 INTEGER,
+    is_strike BOOLEAN DEFAULT FALSE,
+    is_spare BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (game_id, frame_number)
 );
 
--- Feature: Tournament Bag
-CREATE TABLE IF NOT EXISTS tournament_lineups (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TABLE IF NOT EXISTS commander_recommendations (
+    id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id),
-    name VARCHAR(200) NOT NULL,
-    tournament_name VARCHAR(200),
-    pattern_id UUID REFERENCES lane_patterns(id),
-    strategy VARCHAR(50),  -- 'conservative', 'versatile', 'aggressive', 'defensive'
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    session_id UUID REFERENCES bowling_sessions(id),
+    recommended_ball_id UUID REFERENCES bowling_balls(id),
+    pattern_name VARCHAR(255),
+    pattern_length_ft NUMERIC(5,2),
+    pattern_volume_ml NUMERIC(5,2),
+    fit_score NUMERIC(5,2),
+    confidence NUMERIC(4,3),
+    reasoning TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tournament_bag_lineups (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id),
+    name VARCHAR(255) NOT NULL,
+    pattern_name VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS lineup_balls (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    lineup_id UUID NOT NULL REFERENCES tournament_lineups(id) ON DELETE CASCADE,
-    user_arsenal_id UUID NOT NULL REFERENCES user_arsenal(id),
-    role VARCHAR(50) NOT NULL,  -- 'primary', 'secondary', 'tertiary', 'spare'
-    order_index INTEGER NOT NULL,
-    notes TEXT
+    id UUID PRIMARY KEY,
+    lineup_id UUID NOT NULL REFERENCES tournament_bag_lineups(id)
+        ON DELETE CASCADE,
+    ball_id UUID NOT NULL REFERENCES bowling_balls(id),
+    slot_order INTEGER NOT NULL,
+    rationale TEXT,
+    UNIQUE (lineup_id, slot_order)
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_arsenal_user ON user_arsenal(user_id);
+CREATE INDEX IF NOT EXISTS idx_commander_recs_user
+ON commander_recommendations(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_frames_game ON frames(game_id);

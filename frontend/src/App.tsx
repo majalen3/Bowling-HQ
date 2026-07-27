@@ -1,53 +1,34 @@
-import { NavLink, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
+import { Layout } from './components/Layout';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ArsenalPage } from './pages/ArsenalPage';
+import { AuthPage } from './pages/AuthPage';
 import { CommanderPage } from './pages/CommanderPage';
+import { DevPage } from './pages/DevPage';
 import { GhostBowlerPage } from './pages/GhostBowlerPage';
+import { HomePage } from './pages/HomePage';
 import { PatternsPage } from './pages/PatternsPage';
-import { ProgressPage } from './pages/ProgressPage';
+import { SessionsPage } from './pages/SessionsPage';
 import { TournamentPage } from './pages/TournamentPage';
-
-const NAV_LINKS = [
-  { to: '/', label: 'Home / Progress' },
-  { to: '/arsenal', label: 'Arsenal DNA' },
-  { to: '/commander', label: 'Commander AI' },
-  { to: '/patterns', label: 'Patterns' },
-  { to: '/tournament', label: 'Tournament Bag' },
-  { to: '/ghost-bowler', label: 'Ghost Bowler' },
-];
-
-function NavBar() {
-  return (
-    <nav className="card nav-bar">
-      <p className="eyebrow">Bowling-HQ</p>
-      <div className="nav-links">
-        {NAV_LINKS.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.to === '/'}
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-          >
-            {link.label}
-          </NavLink>
-        ))}
-      </div>
-    </nav>
-  );
-}
 
 export function App() {
   return (
-    <Router>
-      <NavBar />
-      <Routes>
-        <Route path="/" element={<ProgressPage />} />
-        <Route path="/arsenal" element={<ArsenalPage />} />
-        <Route path="/commander" element={<CommanderPage />} />
-        <Route path="/patterns" element={<PatternsPage />} />
-        <Route path="/tournament" element={<TournamentPage />} />
-        <Route path="/ghost-bowler" element={<GhostBowlerPage />} />
-      </Routes>
-    </Router>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/commander" element={<CommanderPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/arsenal" element={<ArsenalPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/patterns" element={<PatternsPage />} />
+          <Route path="/tournament" element={<TournamentPage />} />
+          <Route path="/ghost-bowler" element={<GhostBowlerPage />} />
+          <Route path="/dev" element={<DevPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
 }

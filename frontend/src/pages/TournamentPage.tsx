@@ -4,26 +4,18 @@ import {
   createLineup,
   fetchLineupDetail,
   fetchLineups,
-  fetchPatterns,
   recommendLineup,
 } from '../services/api';
-import type { LanePattern } from '../types/patterns';
 import type {
   LineupRecommendation,
-  Strategy,
   TournamentLineup,
   TournamentLineupDetail,
 } from '../types/tournament';
 
-const STRATEGIES: Strategy[] = ['conservative', 'versatile', 'aggressive', 'defensive'];
-
 export function TournamentPage() {
   const [lineups, setLineups] = useState<TournamentLineup[] | null>(null);
-  const [patterns, setPatterns] = useState<LanePattern[] | null>(null);
   const [name, setName] = useState('');
-  const [tournamentName, setTournamentName] = useState('');
-  const [patternId, setPatternId] = useState('');
-  const [strategy, setStrategy] = useState<Strategy>('versatile');
+  const [patternName, setPatternName] = useState('');
   const [selectedLineup, setSelectedLineup] = useState<TournamentLineupDetail | null>(null);
   const [recommendations, setRecommendations] = useState<LineupRecommendation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,11 +31,6 @@ export function TournamentPage() {
 
   useEffect(() => {
     loadLineups();
-    fetchPatterns()
-      .then(setPatterns)
-      .catch((loadError) =>
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load patterns'),
-      );
   }, []);
 
   const onCreate = async (): Promise<void> => {
@@ -55,14 +42,12 @@ export function TournamentPage() {
     try {
       await createLineup({
         name: name.trim(),
-        tournament_name: tournamentName.trim() || undefined,
-        pattern_id: patternId || undefined,
-        strategy,
+        pattern_name: patternName.trim() || undefined,
       });
       setName('');
-      setTournamentName('');
-      await loadLineups();
+      setPatternName('');
       setError(null);
+      await loadLineups();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Failed to create lineup');
     } finally {
@@ -70,27 +55,24 @@ export function TournamentPage() {
     }
   };
 
-  const onViewLineup = async (lineupId: string): Promise<void> => {
+  const onSelect = async (lineupId: string): Promise<void> => {
     try {
       setSelectedLineup(await fetchLineupDetail(lineupId));
       setRecommendations(null);
       setError(null);
-    } catch (viewError) {
-      setError(viewError instanceof Error ? viewError.message : 'Failed to load lineup');
+    } catch (selectError) {
+      setError(selectError instanceof Error ? selectError.message : 'Failed to load lineup');
     }
   };
 
-  const onRecommend = async (lineupId: string): Promise<void> => {
+  const onRecommend = async (): Promise<void> => {
+    if (!selectedLineup) return;
     setIsBusy(true);
     try {
-      const suggestions = await recommendLineup(lineupId);
-      setRecommendations(suggestions);
-      setSelectedLineup(await fetchLineupDetail(lineupId));
+      setRecommendations(await recommendLineup(selectedLineup.id));
       setError(null);
-    } catch (recommendError) {
-      setError(
-        recommendError instanceof Error ? recommendError.message : 'Failed to auto-fill lineup',
-      );
+    } catch (recError) {
+      setError(recError instanceof Error ? recError.message : 'Failed to get recommendations');
     } finally {
       setIsBusy(false);
     }
@@ -101,101 +83,96 @@ export function TournamentPage() {
       <section className="phone-frame">
         <header className="hero">
           <p className="eyebrow">Tournament Bag</p>
-          <h1>Lineups</h1>
-          <p className="subtext">Build an optimized ball lineup for your next tournament.</p>
+          <h1>Tournament Lineups</h1>
+          <p className="subtext">
+            Build strategic ball lineups for tournament play.
+          </p>
         </header>
         {error && <p role="alert">{error}</p>}
         <div className="stack">
           <div className="card">
-            <h2>Create lineup</h2>
-            <label htmlFor="lineupName">Name</label>
+            <h2>Create Lineup</h2>
+            <label htmlFor="lineupName">Lineup name</label>
             <input
               id="lineupName"
+              type="text"
               value={name}
+              placeholder="My Tournament Lineup"
               onChange={(event) => setName(event.target.value)}
             />
-            <label htmlFor="tournamentName">Tournament name</label>
+            <label htmlFor="patternName">Pattern name (optional)</label>
             <input
-              id="tournamentName"
-              value={tournamentName}
-              onChange={(event) => setTournamentName(event.target.value)}
+              id="patternName"
+              type="text"
+              value={patternName}
+              placeholder="e.g. House Shot"
+              onChange={(event) => setPatternName(event.target.value)}
             />
-            <label htmlFor="patternSelect">Target pattern</label>
-            <select
-              id="patternSelect"
-              value={patternId}
-              onChange={(event) => setPatternId(event.target.value)}
-            >
-              <option value="">None</option>
-              {patterns?.map((pattern) => (
-                <option key={pattern.id} value={pattern.id}>
-                  {pattern.name}
-                </option>
-              ))}
-            </select>
-            <label htmlFor="strategySelect">Strategy</label>
-            <select
-              id="strategySelect"
-              value={strategy}
-              onChange={(event) => setStrategy(event.target.value as Strategy)}
-            >
-              {STRATEGIES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
             <button type="button" onClick={onCreate} disabled={isBusy}>
-              Create lineup
+              {isBusy ? 'Creating…' : 'Create Lineup'}
             </button>
           </div>
 
           {!lineups && <p>Loading lineups…</p>}
-          {lineups?.length === 0 && <p className="subtext">No lineups yet. Create one above.</p>}
           {lineups?.map((lineup) => (
             <div className="card" key={lineup.id}>
-              <p className="eyebrow">{lineup.strategy ?? 'no strategy'}</p>
               <h2>{lineup.name}</h2>
-              <p className="subtext">{lineup.tournament_name}</p>
-              <button type="button" onClick={() => onViewLineup(lineup.id)}>
+              {lineup.pattern_name && (
+                <p className="subtext">Pattern: {lineup.pattern_name}</p>
+              )}
+              <p className="subtext">
+                Created {new Date(lineup.created_at).toLocaleDateString()}
+              </p>
+              <button type="button" onClick={() => onSelect(lineup.id)}>
                 View lineup
-              </button>
-              <button type="button" onClick={() => onRecommend(lineup.id)} disabled={isBusy}>
-                Auto-fill from arsenal
               </button>
             </div>
           ))}
 
           {selectedLineup && (
             <div className="card">
-              <h2>{selectedLineup.name} — Bag</h2>
+              <h2>{selectedLineup.name}</h2>
+              {selectedLineup.balls.length > 0 ? (
+                <ul>
+                  {selectedLineup.balls.map((lb) => (
+                    <li key={lb.id}>
+                      Slot {lb.slot_order}:{' '}
+                      <strong>
+                        {lb.ball.brand} {lb.ball.name}
+                      </strong>
+                      {lb.rationale && ` — ${lb.rationale}`}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No balls assigned yet.</p>
+              )}
+              <button type="button" onClick={onRecommend} disabled={isBusy}>
+                {isBusy ? 'Computing…' : 'Auto-recommend balls from arsenal'}
+              </button>
+            </div>
+          )}
+
+          {recommendations && recommendations.length > 0 && (
+            <div className="card">
+              <h2>Recommended Lineup</h2>
               <ul>
-                {selectedLineup.balls.map((lineupBall) => (
-                  <li key={lineupBall.id}>
-                    <strong>{lineupBall.role}</strong>: {lineupBall.ball.brand}{' '}
-                    {lineupBall.ball.name}
+                {recommendations.map((rec) => (
+                  <li key={rec.slot_order}>
+                    <strong>Slot {rec.slot_order} — {rec.role}</strong>:{' '}
+                    {rec.ball.brand} {rec.ball.name}
+                    <br />
+                    <span className="subtext">{rec.reasoning}</span>
                   </li>
                 ))}
-                {selectedLineup.balls.length === 0 && (
-                  <li>No balls assigned yet. Try auto-fill.</li>
-                )}
               </ul>
             </div>
           )}
 
-          {recommendations && (
-            <div className="card">
-              <h2>Suggested roles</h2>
-              <ul>
-                {recommendations.map((recommendation) => (
-                  <li key={recommendation.user_arsenal_id}>
-                    <strong>{recommendation.role}</strong>: {recommendation.ball.brand}{' '}
-                    {recommendation.ball.name}
-                    <p className="subtext">{recommendation.reasoning}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {recommendations?.length === 0 && (
+            <p className="subtext">
+              Add balls to your arsenal first to get lineup recommendations.
+            </p>
           )}
         </div>
       </section>

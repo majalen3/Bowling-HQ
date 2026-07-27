@@ -10,111 +10,91 @@ afterEach(() => {
   } else {
     delete (global as { fetch?: typeof fetch }).fetch;
   }
+  window.history.pushState({}, '', '/');
 });
 
-describe('App', () => {
-  it('renders dashboard and runs session workflow', async () => {
-    const sessions: Array<{
-      id: string;
-      session_type: string;
-      location_name: string | null;
-      started_at: string;
-      completed_at: string | null;
-    }> = [
-      {
-        id: 'session-1',
-        session_type: 'practice',
-        location_name: 'House Shot',
-        started_at: '2026-01-01T00:00:00Z',
-        completed_at: null,
-      },
-    ];
-    const mockFetch = jest.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
-      const requestUrl = String(input);
-      if (requestUrl.endsWith('/sessions/progress')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            total_sessions: sessions.length,
-            completed_sessions: sessions.filter((session) => session.completed_at).length,
-            active_sessions: sessions.filter((session) => !session.completed_at).length,
-            sessions,
-          }),
-        });
-      }
-      if (requestUrl.endsWith('/progress')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            finished_target: 'Ship MVP',
-            scope_lock: ['Progress board visibility'],
-            release_gate: ['make test passes'],
-            board: [
-              {
-                id: 'MVP-001',
-                title: 'Define target',
-                status: 'done',
-                done_criteria: ['Scope locked'],
-              },
-              {
-                id: 'MVP-004',
-                title: 'Complete vertical slices',
-                status: 'in_progress',
-                done_criteria: ['Slice 1 sessions completed: 0/1'],
-              },
-            ],
-          }),
-        });
-      }
-      if (requestUrl.endsWith('/sessions') && init?.method === 'POST') {
-        sessions.push({
-          id: 'session-2',
-          session_type: 'league',
-          location_name: null,
-          started_at: '2026-01-01T01:00:00Z',
-          completed_at: null,
-        });
-        return Promise.resolve({
-          ok: true,
-          json: async () => sessions[1],
-        });
-      }
-      if (requestUrl.includes('/sessions/session-1/complete')) {
-        sessions[0].completed_at = '2026-01-01T00:10:00Z';
-        return Promise.resolve({
-          ok: true,
-          json: async () => sessions[0],
-        });
-      }
+function installMockFetch(): jest.Mock {
+  const mockFetch = jest.fn().mockImplementation((input: RequestInfo | URL) => {
+    const requestUrl = String(input);
+    if (requestUrl.endsWith('/analytics/summary')) {
       return Promise.resolve({
-        ok: false,
-        status: 404,
+        ok: true,
+        json: async () => ({
+          overall_average: 195.5,
+          high_game: 268,
+          total_games: 12,
+          total_sessions: 4,
+          recent_trend: [],
+          per_ball_averages: [],
+        }),
       });
-    });
+    }
+    if (requestUrl.endsWith('/sessions/progress')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          total_sessions: 0,
+          completed_sessions: 0,
+          active_sessions: 0,
+          sessions: [],
+        }),
+      });
+    }
+    return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+  });
 
-    Object.defineProperty(global, 'fetch', {
-      value: mockFetch,
-      configurable: true,
-      writable: true,
-    });
+  Object.defineProperty(global, 'fetch', {
+    value: mockFetch,
+    configurable: true,
+    writable: true,
+  });
+  return mockFetch;
+}
 
+describe('App', () => {
+  it('renders the Home landing page and navigation', async () => {
+    installMockFetch();
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Bowling-HQ Progress' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'Arsenal Simulator' })).toBeInTheDocument();
-    expect(await screen.findByText('Sessions: 1 total / 0 completed / 1 active')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Tap a workflow and start bowling smarter',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Commander' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Arsenal' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Analytics' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Auth' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dev' })).toBeInTheDocument();
+  });
 
-    fireEvent.change(screen.getByLabelText('Session Type'), {
-      target: { value: 'league' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Start session' }));
-    await screen.findByText('Sessions: 2 total / 0 completed / 2 active');
+  it('navigates to the Commander page from Home', async () => {
+    installMockFetch();
+    render(<App />);
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Mark complete' })[0]);
+    fireEvent.click(screen.getByRole('link', { name: 'Commander' }));
+
     await waitFor(() => {
       expect(
-        screen.getByText('Sessions: 2 total / 1 completed / 1 active'),
+        screen.getByRole('heading', { name: 'Opening Ball Advisor' }),
       ).toBeInTheDocument();
     });
+  });
+
+  it('navigates to the Analytics page and shows stats', async () => {
+    installMockFetch();
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Analytics' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Performance Summary' }),
+      ).toBeInTheDocument();
+    });
+    expect(await screen.findByText('195.5')).toBeInTheDocument();
+    expect(screen.getByText('268')).toBeInTheDocument();
   });
 });

@@ -2,128 +2,123 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from src.models.arsenal import BowlingBall
+from src.models.arsenal import BallItem
 from src.models.commander import (
     BallRecommendation,
     CommanderRequest,
     CommanderResponse,
 )
-from src.services.arsenal import get_arsenal_with_balls, list_catalog
+from src.services.arsenal import (
+    get_arsenal_repository,
+    get_settings,
+    list_balls_catalog,
+)
+from src.services.session_progress import DEMO_USER_ID
 
-DEFAULT_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+# Surface grit thresholds for oil-condition matching.
+# Lower grit = more friction = suited for heavier oil.
+_GRIT_OIL_MAP = {
+    "very_heavy": (80, 1000),
+    "heavy": (1000, 2000),
+    "medium": (2000, 3000),
+    "light": (3000, 3500),
+    "dry": (3500, 4000),
+}
 
-_OIL_ORDER = ["dry", "light", "medium", "heavy", "very_heavy"]
-
-# Recreational-to-competitive ball speeds span roughly 10-22 mph, and
-# length ratings run from 1 (early) to 10 (long). These constants map
-# that speed range onto the rating scale so faster speeds target a
-# longer ball, avoiding an over/under reaction early on the lane.
-BALL_SPEED_FLOOR_MPH = 10
-SPEED_TO_LENGTH_DIVISOR = 1.2
-MAX_LENGTH_RATING = 10
+# Differential thresholds for hook-potential categorisation.
+_DIFF_THRESHOLDS = {
+    "low": 0.025,
+    "medium": 0.045,
+}
 
 
-def _oil_score(ball_oil: str | None, lane_condition: str) -> tuple[int, str]:
-    if not ball_oil:
-        return 20, "No oil rating on file, treated as a neutral option."
-    if ball_oil == "any":
-        return 35, "Versatile spare-friendly coverstock works across conditions."
-    if ball_oil == lane_condition:
-        return 40, f"Built for exactly this {lane_condition.replace('_', ' ')} condition."
-    try:
-        ball_index = _OIL_ORDER.index(ball_oil)
-        lane_index = _OIL_ORDER.index(lane_condition)
-        distance = abs(ball_index - lane_index)
-    except ValueError:
-        return 15, "Unrecognized oil rating, scored conservatively."
-    score = max(0, 40 - distance * 12)
+def _oil_score(surface_grit: int, lane_condition: str) -> tuple[int, str]:
+    lo, hi = _GRIT_OIL_MAP.get(lane_condition, (2000, 3000))
+    if lo <= surface_grit <= hi:
+        return 40, f"Surface grit {surface_grit} is ideal for {lane_condition.replace('_', ' ')} conditions."
+    distance = min(abs(surface_grit - lo), abs(surface_grit - hi))
+    score = max(0, 40 - int(distance / 200) * 5)
     return score, (
-        f"Rated for {ball_oil.replace('_', ' ')}, "
-        f"{distance} step(s) from the {lane_condition.replace('_', ' ')} condition."
+        f"Surface grit {surface_grit} is {distance} away from the ideal range "
+        f"for {lane_condition.replace('_', ' ')} conditions."
     )
 
 
-def _release_score(hook_potential: int | None, release_style: str) -> tuple[int, str]:
-    hook = hook_potential if hook_potential is not None else 5
-    target = {"controlled": 3, "balanced": 6, "power": 9}[release_style]
-    distance = abs(hook - target)
-    score = max(0, 20 - distance * 3)
+def _release_score(differential: float, release_style: str) -> tuple[int, str]:
+    # Map differential to hook potential: controlled→low, balanced→medium, power→high
+    if release_style == "controlled":
+        target = _DIFF_THRESHOLDS["low"]
+    elif release_style == "balanced":
+        target = _DIFF_THRESHOLDS["medium"]
+    else:
+        target = 0.060
+    distance = abs(differential - target)
+    score = max(0, 20 - int(distance * 400))
     return score, (
-        f"Hook potential {hook}/10 fits a {release_style} release "
-        f"(target ~{target})."
+        f"Differential {differential:.3f} fits a {release_style} release "
+        f"(target ~{target:.3f})."
     )
 
 
-def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
-    ball_length = length if length is not None else 5
-    # Faster ball speeds benefit from more length to avoid over/under
-    # reacting early. See the module-level constants for the mapping.
-    target_length = min(
-        MAX_LENGTH_RATING,
-        max(1, round((ball_speed - BALL_SPEED_FLOOR_MPH) / SPEED_TO_LENGTH_DIVISOR)),
-    )
-    distance = abs(ball_length - target_length)
-    score = max(0, 20 - distance * 3)
+def _length_score(rg: float, ball_speed: float) -> tuple[int, str]:
+    # Higher rg = longer arcing shape → suits faster speeds.
+    # Target rg range: ~2.40 (slow) to ~2.60 (fast, 22 mph)
+    SPEED_FLOOR = 10.0
+    target_rg = 2.40 + max(0.0, (ball_speed - SPEED_FLOOR) / 100.0)
+    target_rg = min(2.62, target_rg)
+    distance = abs(rg - target_rg)
+    score = max(0, 20 - int(distance * 400))
     return score, (
-        f"Length rating {ball_length}/10 pairs with a "
-        f"{ball_speed:.1f} mph release (target ~{target_length})."
+        f"RG {rg:.3f} pairs with a {ball_speed:.1f} mph release "
+        f"(target ~{target_rg:.3f})."
     )
 
 
-def _pattern_score(core_type: str | None, pattern_difficulty: int) -> tuple[int, str]:
-    # Harder patterns reward stronger, asymmetrical cores; easier ones favor symmetrical.
-    if core_type == "asymmetrical":
+def _pattern_score(mass_bias: float, pattern_difficulty: int) -> tuple[int, str]:
+    # Higher mass bias → asymmetric core → better for harder patterns.
+    if mass_bias > 0.010:
         score = 10 + pattern_difficulty * 2.5
+        label = "asymmetric"
     else:
         score = 20 - pattern_difficulty * 2.5
+        label = "symmetric"
     score = max(0, min(20, round(score)))
     return score, (
-        f"{(core_type or 'unknown').capitalize()} core matched to "
+        f"{label.capitalize()} core (mass bias {mass_bias:.3f}) matched to "
         f"difficulty level {pattern_difficulty}/4."
     )
 
 
-def _score_ball(ball: BowlingBall, request: CommanderRequest) -> tuple[int, str]:
-    oil_pts, oil_reason = _oil_score(ball.oil_condition, request.lane_condition)
+def _score_ball(ball: BallItem, request: CommanderRequest) -> tuple[int, str]:
+    oil_pts, oil_reason = _oil_score(ball.surface_grit, request.lane_condition)
     release_pts, release_reason = _release_score(
-        ball.hook_potential, request.release_style,
+        ball.differential, request.release_style,
     )
-    length_pts, length_reason = _length_score(ball.length, request.ball_speed)
+    length_pts, length_reason = _length_score(ball.rg, request.ball_speed)
     pattern_pts, pattern_reason = _pattern_score(
-        ball.core_type, request.pattern_difficulty,
+        ball.mass_bias, request.pattern_difficulty,
     )
     total = oil_pts + release_pts + length_pts + pattern_pts
     reasoning = " ".join([oil_reason, release_reason, length_reason, pattern_reason])
     return total, reasoning
 
 
-def recommend(request: CommanderRequest, user_id: UUID = DEFAULT_USER_ID) -> CommanderResponse:
-    arsenal_rows = get_arsenal_with_balls(user_id=user_id)
-    from_arsenal = bool(arsenal_rows)
+def recommend(
+    request: CommanderRequest,
+    user_id: UUID = DEMO_USER_ID,
+) -> CommanderResponse:
+    repo = get_arsenal_repository()
+    arsenal_balls = repo.list_arsenal(user_id)
+    from_arsenal = bool(arsenal_balls)
 
-    scored: list[tuple[int, str, BowlingBall, UUID | None]] = []
+    scored: list[tuple[int, str, BallItem, UUID | None]] = []
     if from_arsenal:
-        for row in arsenal_rows:
-            ball = BowlingBall(
-                id=row["ball_id"],
-                brand=row["brand"],
-                name=row["name"],
-                coverstock_type=row["coverstock_type"],
-                core_type=row["core_type"],
-                rg=row["rg"],
-                differential=row["differential"],
-                hook_potential=row["hook_potential"],
-                length=row["length"],
-                backend=row["backend"],
-                oil_condition=row["oil_condition"],
-                weight_options=row["weight_options"],
-                description=row["description"],
-                created_at=row["ball_created_at"],
-            )
+        for entry in arsenal_balls:
+            ball = entry.ball
             score, reasoning = _score_ball(ball, request)
-            scored.append((score, reasoning, ball, row["id"]))
+            scored.append((score, reasoning, ball, entry.id))
     else:
-        for ball in list_catalog():
+        for ball in list_balls_catalog():
             score, reasoning = _score_ball(ball, request)
             scored.append((score, reasoning, ball, None))
 

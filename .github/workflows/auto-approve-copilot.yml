@@ -1,0 +1,20 @@
+name: Auto-approve Copilot CI runs
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [requested]
+
+jobs:
+  approve:
+    # Only approve runs triggered by the Copilot coding agent bot.
+    if: github.event.workflow_run.triggering_actor.login == 'copilot-swe-agent[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Approve pending workflow run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run approve "$RUN_ID" --repo "$GITHUB_REPOSITORY"

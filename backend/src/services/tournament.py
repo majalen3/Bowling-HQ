@@ -7,7 +7,7 @@ from psycopg import connect
 from psycopg.rows import dict_row
 
 from src.config import get_settings
-from src.models.arsenal import BowlingBall
+from src.models.arsenal import BallItem
 from src.models.tournament import (
     LineupBall,
     LineupBallAddRequest,
@@ -16,17 +16,14 @@ from src.models.tournament import (
     TournamentLineup,
     TournamentLineupDetail,
 )
+from src.services.session_progress import DEMO_USER_ID
 
-DEFAULT_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+_BALL_COLUMNS = """
+    id, name, brand, coverstock, rg, differential,
+    mass_bias, surface_grit, weight_lbs, created_at
+"""
 
-_STRATEGY_WEIGHT = {
-    "conservative": -1,
-    "defensive": -1,
-    "versatile": 0,
-    "aggressive": 1,
-}
-
-_ROLE_ORDER = ["primary", "secondary", "tertiary", "spare"]
+_ROLES = ["primary", "secondary", "tertiary", "spare"]
 
 
 def _connection():
@@ -41,18 +38,17 @@ def _ensure_default_user(connection) -> None:
             VALUES (%s, %s, %s)
             ON CONFLICT (id) DO NOTHING
             """,
-            (DEFAULT_USER_ID, "demo@bowling-hq.local", "Demo User"),
+            (DEMO_USER_ID, "demo@bowling-hq.local", "Demo User"),
         )
 
 
-def list_lineups(user_id: UUID = DEFAULT_USER_ID) -> list[TournamentLineup]:
+def list_lineups(user_id: UUID = DEMO_USER_ID) -> list[TournamentLineup]:
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, user_id, name, tournament_name, pattern_id,
-                    strategy, notes, created_at
-                FROM tournament_lineups
+                SELECT id, user_id, name, pattern_name, created_at
+                FROM tournament_bag_lineups
                 WHERE user_id = %s
                 ORDER BY created_at DESC
                 """,
@@ -64,7 +60,7 @@ def list_lineups(user_id: UUID = DEFAULT_USER_ID) -> list[TournamentLineup]:
 
 def create_lineup(
     payload: LineupCreateRequest,
-    user_id: UUID = DEFAULT_USER_ID,
+    user_id: UUID = DEMO_USER_ID,
 ) -> TournamentLineup:
     lineup_id = uuid4()
     with _connection() as connection:
@@ -72,357 +68,205 @@ def create_lineup(
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO tournament_lineups (
-                    id, user_id, name, tournament_name, pattern_id,
-                    strategy, notes
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, user_id, name, tournament_name, pattern_id,
-                    strategy, notes, created_at
+                INSERT INTO tournament_bag_lineups (id, user_id, name, pattern_name)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, user_id, name, pattern_name, created_at
                 """,
-                (
-                    lineup_id,
-                    user_id,
-                    payload.name,
-                    payload.tournament_name,
-                    payload.pattern_id,
-                    payload.strategy,
-                    payload.notes,
-                ),
+                (lineup_id, user_id, payload.name, payload.pattern_name),
             )
             row = cursor.fetchone()
     return TournamentLineup.model_validate(row)
 
 
-def _row_to_ball(row: dict) -> BowlingBall:
-    return BowlingBall(
-        id=row["ball_id"],
-        brand=row["brand"],
-        name=row["name"],
-        coverstock_type=row["coverstock_type"],
-        core_type=row["core_type"],
-        rg=row["rg"],
-        differential=row["differential"],
-        hook_potential=row["hook_potential"],
-        length=row["length"],
-        backend=row["backend"],
-        oil_condition=row["oil_condition"],
-        weight_options=row["weight_options"],
-        description=row["description"],
-        created_at=row["ball_created_at"],
-    )
-
-
-def get_lineup(
-    lineup_id: UUID,
-    user_id: UUID = DEFAULT_USER_ID,
-) -> Optional[TournamentLineupDetail]:
+def get_lineup(lineup_id: UUID, user_id: UUID = DEMO_USER_ID) -> Optional[TournamentLineupDetail]:
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, user_id, name, tournament_name, pattern_id,
-                    strategy, notes, created_at
-                FROM tournament_lineups
+                SELECT id, user_id, name, pattern_name, created_at
+                FROM tournament_bag_lineups
                 WHERE id = %s AND user_id = %s
                 """,
                 (lineup_id, user_id),
             )
-            lineup_row = cursor.fetchone()
-            if lineup_row is None:
+            row = cursor.fetchone()
+            if row is None:
                 return None
+            lineup = TournamentLineup.model_validate(row)
 
             cursor.execute(
-                """
-                SELECT
-                    lb.id, lb.user_arsenal_id, lb.role, lb.order_index,
-                    lb.notes,
-                    bb.id AS ball_id, bb.brand, bb.name, bb.coverstock_type,
-                    bb.core_type, bb.rg, bb.differential, bb.hook_potential,
-                    bb.length, bb.backend, bb.oil_condition,
-                    bb.weight_options, bb.description,
-                    bb.created_at AS ball_created_at
+                f"""
+                SELECT lb.id, lb.ball_id, lb.slot_order, lb.rationale,
+                    b.id, b.name, b.brand, b.coverstock, b.rg, b.differential,
+                    b.mass_bias, b.surface_grit, b.weight_lbs, b.created_at
                 FROM lineup_balls lb
-                JOIN user_arsenal ua ON ua.id = lb.user_arsenal_id
-                JOIN bowling_balls bb ON bb.id = ua.ball_id
+                JOIN bowling_balls b ON b.id = lb.ball_id
                 WHERE lb.lineup_id = %s
-                ORDER BY lb.order_index ASC
+                ORDER BY lb.slot_order
                 """,
                 (lineup_id,),
             )
             ball_rows = cursor.fetchall()
 
-    balls = [
-        LineupBall(
-            id=row["id"],
-            user_arsenal_id=row["user_arsenal_id"],
-            role=row["role"],
-            order_index=row["order_index"],
-            notes=row["notes"],
-            ball=_row_to_ball(row),
-        )
-        for row in ball_rows
-    ]
-    return TournamentLineupDetail(
-        **TournamentLineup.model_validate(lineup_row).model_dump(),
-        balls=balls,
-    )
+    balls = [_row_to_lineup_ball(row) for row in ball_rows]
+    return TournamentLineupDetail(**lineup.model_dump(), balls=balls)
 
 
-def add_ball_to_lineup(
-    lineup_id: UUID,
-    payload: LineupBallAddRequest,
-    user_id: UUID = DEFAULT_USER_ID,
-) -> LineupBall:
+def delete_lineup(lineup_id: UUID, user_id: UUID = DEMO_USER_ID) -> bool:
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT id FROM tournament_lineups WHERE id = %s AND user_id = %s",
+                """
+                DELETE FROM tournament_bag_lineups
+                WHERE id = %s AND user_id = %s
+                RETURNING id
+                """,
+                (lineup_id, user_id),
+            )
+            return cursor.fetchone() is not None
+
+
+def add_lineup_ball(
+    lineup_id: UUID,
+    payload: LineupBallAddRequest,
+    user_id: UUID = DEMO_USER_ID,
+) -> Optional[LineupBall]:
+    lb_id = uuid4()
+    with _connection() as connection:
+        with connection.cursor() as cursor:
+            # Verify lineup belongs to user
+            cursor.execute(
+                "SELECT id FROM tournament_bag_lineups WHERE id = %s AND user_id = %s",
                 (lineup_id, user_id),
             )
             if cursor.fetchone() is None:
-                raise KeyError(f"Lineup {lineup_id} not found")
-
-            cursor.execute(
-                "SELECT id FROM user_arsenal WHERE id = %s AND user_id = %s",
-                (payload.user_arsenal_id, user_id),
-            )
-            if cursor.fetchone() is None:
-                raise ValueError(f"Arsenal item {payload.user_arsenal_id} not found")
-
-            cursor.execute(
-                "SELECT COALESCE(MAX(order_index), -1) + 1 AS next_index "
-                "FROM lineup_balls WHERE lineup_id = %s",
-                (lineup_id,),
-            )
-            next_index = cursor.fetchone()["next_index"]
-
-            lineup_ball_id = uuid4()
-            cursor.execute(
-                """
-                INSERT INTO lineup_balls (
-                    id, lineup_id, user_arsenal_id, role, order_index, notes
-                ) VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id
-                """,
-                (
-                    lineup_ball_id,
-                    lineup_id,
-                    payload.user_arsenal_id,
-                    payload.role,
-                    next_index,
-                    payload.notes,
-                ),
-            )
+                return None
 
             cursor.execute(
                 """
-                SELECT
-                    lb.id, lb.user_arsenal_id, lb.role, lb.order_index,
-                    lb.notes,
-                    bb.id AS ball_id, bb.brand, bb.name, bb.coverstock_type,
-                    bb.core_type, bb.rg, bb.differential, bb.hook_potential,
-                    bb.length, bb.backend, bb.oil_condition,
-                    bb.weight_options, bb.description,
-                    bb.created_at AS ball_created_at
-                FROM lineup_balls lb
-                JOIN user_arsenal ua ON ua.id = lb.user_arsenal_id
-                JOIN bowling_balls bb ON bb.id = ua.ball_id
-                WHERE lb.id = %s
+                INSERT INTO lineup_balls (id, lineup_id, ball_id, slot_order, rationale)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (lineup_id, slot_order) DO UPDATE
+                    SET ball_id = EXCLUDED.ball_id,
+                        rationale = EXCLUDED.rationale
+                RETURNING id, ball_id, slot_order, rationale
                 """,
-                (lineup_ball_id,),
+                (lb_id, lineup_id, payload.ball_id, payload.slot_order, payload.rationale),
             )
-            row = cursor.fetchone()
+            entry = cursor.fetchone()
+
+            cursor.execute(
+                f"""
+                SELECT {_BALL_COLUMNS}
+                FROM bowling_balls WHERE id = %s
+                """,
+                (payload.ball_id,),
+            )
+            ball_row = cursor.fetchone()
+
+    if entry is None or ball_row is None:
+        return None
+    ball = BallItem.model_validate(ball_row)
     return LineupBall(
-        id=row["id"],
-        user_arsenal_id=row["user_arsenal_id"],
-        role=row["role"],
-        order_index=row["order_index"],
-        notes=row["notes"],
-        ball=_row_to_ball(row),
+        id=entry["id"],
+        ball_id=entry["ball_id"],
+        slot_order=entry["slot_order"],
+        rationale=entry["rationale"],
+        ball=ball,
     )
 
 
-def remove_ball_from_lineup(
+def remove_lineup_ball(
     lineup_id: UUID,
     lineup_ball_id: UUID,
-    user_id: UUID = DEFAULT_USER_ID,
-) -> None:
+    user_id: UUID = DEMO_USER_ID,
+) -> bool:
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                DELETE FROM lineup_balls
-                WHERE id = %s AND lineup_id = %s
-                    AND lineup_id IN (
-                        SELECT id FROM tournament_lineups WHERE user_id = %s
-                    )
-                RETURNING id
+                DELETE FROM lineup_balls lb
+                USING tournament_bag_lineups tbl
+                WHERE lb.id = %s
+                    AND lb.lineup_id = tbl.id
+                    AND tbl.id = %s
+                    AND tbl.user_id = %s
+                RETURNING lb.id
                 """,
                 (lineup_ball_id, lineup_id, user_id),
             )
-            row = cursor.fetchone()
-            if row is None:
-                raise KeyError(f"Lineup ball {lineup_ball_id} not found")
-
-
-def _score_arsenal_ball(
-    row: dict,
-    pattern_row: Optional[dict],
-    strategy: Optional[str],
-) -> tuple[int, str]:
-    hook = row["hook_potential"] if row["hook_potential"] is not None else 5
-    score = 20
-    reasoning_parts = []
-
-    if pattern_row:
-        if row["coverstock_type"] == pattern_row["recommended_coverstock"]:
-            score += 40
-            reasoning_parts.append("Coverstock matches the target pattern.")
-        hook_min = pattern_row["recommended_hook_min"] or 1
-        hook_max = pattern_row["recommended_hook_max"] or 10
-        if hook_min <= hook <= hook_max:
-            score += 30
-            reasoning_parts.append(
-                f"Hook potential {hook} is within the pattern's recommended range.",
-            )
-        else:
-            distance = min(abs(hook - hook_min), abs(hook - hook_max))
-            score -= distance * 3
-            reasoning_parts.append(
-                f"Hook potential {hook} is outside the pattern's ideal range.",
-            )
-    else:
-        reasoning_parts.append("No target pattern specified; scored on general versatility.")
-
-    weight = _STRATEGY_WEIGHT.get(strategy or "versatile", 0)
-    score += weight * (hook - 5) * 2
-    if strategy:
-        reasoning_parts.append(f"Adjusted for a {strategy} strategy.")
-
-    return max(0, round(score)), " ".join(reasoning_parts)
+            return cursor.fetchone() is not None
 
 
 def recommend_lineup(
     lineup_id: UUID,
-    user_id: UUID = DEFAULT_USER_ID,
+    user_id: UUID = DEMO_USER_ID,
 ) -> list[LineupRecommendation]:
     with _connection() as connection:
         with connection.cursor() as cursor:
+            # Get arsenal balls for this user
             cursor.execute(
-                """
-                SELECT id, pattern_id, strategy
-                FROM tournament_lineups
-                WHERE id = %s AND user_id = %s
-                """,
-                (lineup_id, user_id),
-            )
-            lineup_row = cursor.fetchone()
-            if lineup_row is None:
-                raise KeyError(f"Lineup {lineup_id} not found")
-
-            pattern_row = None
-            if lineup_row["pattern_id"]:
-                cursor.execute(
-                    """
-                    SELECT recommended_coverstock, recommended_hook_min,
-                        recommended_hook_max
-                    FROM lane_patterns
-                    WHERE id = %s
-                    """,
-                    (lineup_row["pattern_id"],),
-                )
-                pattern_row = cursor.fetchone()
-
-            cursor.execute(
-                """
-                SELECT
-                    ua.id AS user_arsenal_id, bb.id AS ball_id, bb.brand,
-                    bb.name, bb.coverstock_type, bb.core_type, bb.rg,
-                    bb.differential, bb.hook_potential, bb.length,
-                    bb.backend, bb.oil_condition, bb.weight_options,
-                    bb.description, bb.created_at AS ball_created_at
+                f"""
+                SELECT b.{_BALL_COLUMNS.replace('id,', 'id,').strip()}
                 FROM user_arsenal ua
-                JOIN bowling_balls bb ON bb.id = ua.ball_id
+                JOIN bowling_balls b ON b.id = ua.ball_id
                 WHERE ua.user_id = %s
+                ORDER BY b.differential DESC
                 """,
                 (user_id,),
             )
-            arsenal_rows = cursor.fetchall()
+            rows = cursor.fetchall()
 
-    if not arsenal_rows:
+    if not rows:
         return []
 
-    scored = []
-    for row in arsenal_rows:
-        score, reasoning = _score_arsenal_ball(
-            row, pattern_row, lineup_row["strategy"],
-        )
-        scored.append((score, reasoning, row))
-    scored.sort(key=lambda item: item[0], reverse=True)
+    balls = [BallItem.model_validate(row) for row in rows]
 
-    # Reserve the lowest-hook, most spare-friendly ball for the "spare" role.
-    def _hook_potential(index: int) -> int:
-        _, _, candidate_row = scored[index]
-        return candidate_row.get("hook_potential") or 0
+    # Sort: highest differential first (most hook) → primary, spare last
+    # Spare ball: lowest differential (straightest)
+    balls_sorted = sorted(balls, key=lambda b: b.differential, reverse=True)
 
-    spare_index = min(range(len(scored)), key=_hook_potential)
-    spare_candidate = scored[spare_index]
-    remaining = [item for i, item in enumerate(scored) if i != spare_index]
+    recommendations = []
+    used: set[UUID] = set()
+    for slot, role in enumerate(_ROLES, start=1):
+        if not balls_sorted:
+            break
+        if role == "spare":
+            # Pick the straightest ball (lowest differential) not yet used
+            spare = min(
+                (b for b in balls_sorted if b.id not in used),
+                key=lambda b: b.differential,
+                default=None,
+            )
+            if spare is None:
+                continue
+            ball = spare
+            reasoning = f"Lowest differential ({ball.differential:.3f}) makes it the most predictable spare ball."
+        else:
+            idx = slot - 1
+            ball = next((b for b in balls_sorted if b.id not in used), balls_sorted[0])
+            reasoning = f"Differential {ball.differential:.3f} suits the {role} role for this lineup."
 
-    recommendations: list[LineupRecommendation] = []
-    role_pool = ["primary", "secondary", "tertiary"]
-    for index, (score, reasoning, row) in enumerate(remaining[: len(role_pool)]):
+        used.add(ball.id)
         recommendations.append(
             LineupRecommendation(
-                user_arsenal_id=row["user_arsenal_id"],
-                role=role_pool[index],
+                ball_id=ball.id,
+                slot_order=slot,
+                role=role,
                 reasoning=reasoning,
-                ball=_row_to_ball(row),
+                ball=ball,
             ),
         )
 
-    if len(scored) > 1:
-        spare_score, spare_reasoning, spare_row = spare_candidate
-        recommendations.append(
-            LineupRecommendation(
-                user_arsenal_id=spare_row["user_arsenal_id"],
-                role="spare",
-                reasoning=f"Lowest hook potential in your arsenal: {spare_reasoning}",
-                ball=_row_to_ball(spare_row),
-            ),
-        )
-
-    _apply_recommendations(lineup_id, recommendations)
     return recommendations
 
 
-def _apply_recommendations(
-    lineup_id: UUID,
-    recommendations: list[LineupRecommendation],
-) -> None:
-    """Auto-fill the lineup: replace existing lineup balls with the
-    freshly computed recommendation set so the lineup reflects the
-    latest suggested roles."""
-    with _connection() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM lineup_balls WHERE lineup_id = %s",
-                (lineup_id,),
-            )
-            for index, recommendation in enumerate(recommendations):
-                cursor.execute(
-                    """
-                    INSERT INTO lineup_balls (
-                        id, lineup_id, user_arsenal_id, role, order_index,
-                        notes
-                    ) VALUES (%s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        uuid4(),
-                        lineup_id,
-                        recommendation.user_arsenal_id,
-                        recommendation.role,
-                        index,
-                        recommendation.reasoning,
-                    ),
-                )
+def _row_to_lineup_ball(row: dict) -> LineupBall:
+    ball = BallItem.model_validate(row)
+    return LineupBall(
+        id=row["id"],
+        ball_id=row["ball_id"],
+        slot_order=row["slot_order"],
+        rationale=row.get("rationale"),
+        ball=ball,
+    )

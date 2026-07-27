@@ -1,4 +1,4 @@
-import type { BowlingBall } from './arsenal';
+import type { BallItem } from './arsenal';
 
 export type LaneCondition = 'dry' | 'light' | 'medium' | 'heavy' | 'very_heavy';
 export type ReleaseStyle = 'controlled' | 'balanced' | 'power';
@@ -15,7 +15,7 @@ export type BallRecommendation = {
   role: RecommendationRole;
   confidence: number;
   reasoning: string;
-  ball: BowlingBall;
+  ball: BallItem;
   arsenal_id: string | null;
 };
 

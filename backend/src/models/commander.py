@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from src.models.arsenal import BowlingBall
+from src.models.arsenal import BallItem
 
 LaneCondition = Literal["dry", "light", "medium", "heavy", "very_heavy"]
 ReleaseStyle = Literal["controlled", "balanced", "power"]
@@ -21,7 +21,7 @@ class BallRecommendation(BaseModel):
     role: RecommendationRole
     confidence: int
     reasoning: str
-    ball: BowlingBall
+    ball: BallItem
     arsenal_id: Optional[UUID] = None
 
 

@@ -1,39 +1,29 @@
-import type { BowlingBall } from './arsenal';
-
-export type Strategy = 'conservative' | 'versatile' | 'aggressive' | 'defensive';
-export type LineupRole = 'primary' | 'secondary' | 'tertiary' | 'spare';
+import type { BallItem } from './arsenal';
 
 export type LineupCreateInput = {
   name: string;
-  tournament_name?: string;
-  pattern_id?: string;
-  strategy?: Strategy;
-  notes?: string;
+  pattern_name?: string;
 };
 
 export type LineupBallAddInput = {
-  user_arsenal_id: string;
-  role: LineupRole;
-  notes?: string;
+  ball_id: string;
+  slot_order: number;
+  rationale?: string;
 };
 
 export type LineupBall = {
   id: string;
-  user_arsenal_id: string;
-  role: LineupRole;
-  order_index: number;
-  notes: string | null;
-  ball: BowlingBall;
+  ball_id: string;
+  slot_order: number;
+  rationale: string | null;
+  ball: BallItem;
 };
 
 export type TournamentLineup = {
   id: string;
   user_id: string;
   name: string;
-  tournament_name: string | null;
-  pattern_id: string | null;
-  strategy: string | null;
-  notes: string | null;
+  pattern_name: string | null;
   created_at: string;
 };
 
@@ -42,8 +32,9 @@ export type TournamentLineupDetail = TournamentLineup & {
 };
 
 export type LineupRecommendation = {
-  user_arsenal_id: string;
-  role: LineupRole;
+  ball_id: string;
+  slot_order: number;
+  role: string;
   reasoning: string;
-  ball: BowlingBall;
+  ball: BallItem;
 };

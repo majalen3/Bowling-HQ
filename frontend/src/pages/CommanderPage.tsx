@@ -1,44 +1,70 @@
 import { useState } from 'react';
 
-import { fetchCommanderRecommendation } from '../services/api';
+import { getOpeningBallRecommendation } from '../services/api';
 import type {
-  CommanderResponse,
-  LaneCondition,
-  ReleaseStyle,
-} from '../types/commander';
+  BowlerInput,
+  PatternInput,
+  RecommendationResponse,
+} from '../types/recommendations';
 
-const LANE_CONDITIONS: LaneCondition[] = ['dry', 'light', 'medium', 'heavy', 'very_heavy'];
-const RELEASE_STYLES: ReleaseStyle[] = ['controlled', 'balanced', 'power'];
-
-const ROLE_LABELS: Record<string, string> = {
-  primary: 'Primary',
-  alternative: 'Alternative',
-  backup: 'Backup',
+const RANK_LABELS: Record<number, string> = {
+  1: 'gold',
+  2: 'silver',
+  3: 'bronze',
 };
 
 export function CommanderPage() {
-  const [laneCondition, setLaneCondition] = useState<LaneCondition>('medium');
-  const [patternDifficulty, setPatternDifficulty] = useState(2);
-  const [ballSpeed, setBallSpeed] = useState(16);
-  const [releaseStyle, setReleaseStyle] = useState<ReleaseStyle>('balanced');
-  const [result, setResult] = useState<CommanderResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [pattern, setPattern] = useState<PatternInput>({
+    name: 'House Shot',
+    length_ft: 40,
+    volume_ml: 24,
+    asymmetry_index: 0.0,
+    front_oil_pct: 0.34,
+    mid_oil_pct: 0.33,
+    backend_oil_pct: 0.33,
+    lane_surface: 'synthetic',
+  });
+  const [bowler, setBowler] = useState<BowlerInput>({
+    average: 190,
+    speed_mph: 17,
+    rev_rate: 350,
+    axis_rotation_deg: 45,
+    axis_tilt_deg: 15,
+    consistency: 0.75,
+  });
+  const [result, setResult] = useState<RecommendationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updatePattern = (
+    key: keyof PatternInput,
+    value: string,
+  ): void => {
+    setPattern((prev) => ({
+      ...prev,
+      [key]: key === 'name' || key === 'lane_surface' ? value : Number(value),
+    }));
+  };
+
+  const updateBowler = (key: keyof BowlerInput, value: string): void => {
+    setBowler((prev) => ({ ...prev, [key]: Number(value) }));
+  };
 
   const onSubmit = async (): Promise<void> => {
     setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetchCommanderRecommendation({
-        lane_condition: laneCondition,
-        pattern_difficulty: patternDifficulty,
-        ball_speed: ballSpeed,
-        release_style: releaseStyle,
+      const response = await getOpeningBallRecommendation({
+        pattern,
+        bowler,
+        top_n: 3,
       });
       setResult(response);
-      setError(null);
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : 'Failed to get recommendation',
+        submitError instanceof Error
+          ? submitError.message
+          : 'Failed to get recommendation',
       );
     } finally {
       setIsLoading(false);
@@ -46,93 +72,247 @@ export function CommanderPage() {
   };
 
   return (
-    <main className="app-shell">
-      <section className="phone-frame">
-        <header className="hero">
-          <p className="eyebrow">Commander AI</p>
-          <h1>Ball Recommendation</h1>
-          <p className="subtext">Tell us the lane conditions and we'll pick your best ball.</p>
-        </header>
-        {error && <p role="alert">{error}</p>}
-        <div className="stack">
-          <div className="card">
-            <label htmlFor="laneCondition">Lane condition</label>
-            <select
-              id="laneCondition"
-              value={laneCondition}
-              onChange={(event) => setLaneCondition(event.target.value as LaneCondition)}
-            >
-              {LANE_CONDITIONS.map((condition) => (
-                <option key={condition} value={condition}>
-                  {condition.replace('_', ' ')}
-                </option>
-              ))}
-            </select>
+    <section className="stack">
+      <header className="hero">
+        <p className="eyebrow">Commander AI</p>
+        <h1>Opening Ball Advisor</h1>
+        <p className="subtext">
+          Physics-driven ball recommendations for any oil pattern.
+        </p>
+      </header>
 
-            <label htmlFor="patternDifficulty">Pattern difficulty (1-4)</label>
+      {error && <p role="alert">{error}</p>}
+
+      <section className="card">
+        <h2>Oil Pattern</h2>
+        <div className="form-group">
+          <label htmlFor="patternName">Pattern Name</label>
+          <input
+            id="patternName"
+            value={pattern.name ?? ''}
+            onChange={(event) => updatePattern('name', event.target.value)}
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="length">Length (ft)</label>
             <input
-              id="patternDifficulty"
+              id="length"
               type="number"
-              min={1}
-              max={4}
-              value={patternDifficulty}
-              onChange={(event) => setPatternDifficulty(Number(event.target.value))}
+              value={pattern.length_ft}
+              onChange={(event) =>
+                updatePattern('length_ft', event.target.value)
+              }
             />
-
-            <label htmlFor="ballSpeed">Ball speed (mph)</label>
-            <input
-              id="ballSpeed"
-              type="number"
-              min={10}
-              max={22}
-              value={ballSpeed}
-              onChange={(event) => setBallSpeed(Number(event.target.value))}
-            />
-
-            <label htmlFor="releaseStyle">Release style</label>
-            <select
-              id="releaseStyle"
-              value={releaseStyle}
-              onChange={(event) => setReleaseStyle(event.target.value as ReleaseStyle)}
-            >
-              {RELEASE_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {style}
-                </option>
-              ))}
-            </select>
-
-            <button type="button" onClick={onSubmit} disabled={isLoading}>
-              Get recommendation
-            </button>
           </div>
-
-          {result && (
-            <div className="stack">
-              {!result.from_arsenal && (
-                <p className="subtext">
-                  Your arsenal is empty — showing the top matches from the catalog instead.
-                </p>
-              )}
-              {result.recommendations.map((recommendation) => (
-                <div
-                  className="card"
-                  key={`${recommendation.role}-${recommendation.arsenal_id ?? recommendation.ball.id}`}
-                >
-                  <p className="eyebrow">
-                    {ROLE_LABELS[recommendation.role] ?? recommendation.role} · Confidence{' '}
-                    {recommendation.confidence}%
-                  </p>
-                  <h2>
-                    {recommendation.ball.brand} {recommendation.ball.name}
-                  </h2>
-                  <p className="subtext">{recommendation.reasoning}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="form-group">
+            <label htmlFor="volume">Volume (mL)</label>
+            <input
+              id="volume"
+              type="number"
+              value={pattern.volume_ml}
+              onChange={(event) =>
+                updatePattern('volume_ml', event.target.value)
+              }
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="asymmetry">Asymmetry Index</label>
+          <input
+            id="asymmetry"
+            type="number"
+            step="0.01"
+            min={0}
+            max={1}
+            value={pattern.asymmetry_index}
+            onChange={(event) =>
+              updatePattern('asymmetry_index', event.target.value)
+            }
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="front">Front %</label>
+            <input
+              id="front"
+              type="number"
+              step="0.01"
+              value={pattern.front_oil_pct}
+              onChange={(event) =>
+                updatePattern('front_oil_pct', event.target.value)
+              }
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="mid">Mid %</label>
+            <input
+              id="mid"
+              type="number"
+              step="0.01"
+              value={pattern.mid_oil_pct}
+              onChange={(event) =>
+                updatePattern('mid_oil_pct', event.target.value)
+              }
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="back">Back %</label>
+            <input
+              id="back"
+              type="number"
+              step="0.01"
+              value={pattern.backend_oil_pct}
+              onChange={(event) =>
+                updatePattern('backend_oil_pct', event.target.value)
+              }
+            />
+          </div>
         </div>
       </section>
-    </main>
+
+      <section className="card">
+        <h2>Bowler Profile</h2>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="average">Average</label>
+            <input
+              id="average"
+              type="number"
+              value={bowler.average}
+              onChange={(event) =>
+                updateBowler('average', event.target.value)
+              }
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="speed">Speed (mph)</label>
+            <input
+              id="speed"
+              type="number"
+              value={bowler.speed_mph}
+              onChange={(event) =>
+                updateBowler('speed_mph', event.target.value)
+              }
+            />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="revRate">Rev Rate (rpm)</label>
+            <input
+              id="revRate"
+              type="number"
+              value={bowler.rev_rate}
+              onChange={(event) =>
+                updateBowler('rev_rate', event.target.value)
+              }
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="rotation">Axis Rotation (deg)</label>
+            <input
+              id="rotation"
+              type="number"
+              value={bowler.axis_rotation_deg}
+              onChange={(event) =>
+                updateBowler('axis_rotation_deg', event.target.value)
+              }
+            />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="tilt">Axis Tilt (deg)</label>
+            <input
+              id="tilt"
+              type="number"
+              value={bowler.axis_tilt_deg}
+              onChange={(event) =>
+                updateBowler('axis_tilt_deg', event.target.value)
+              }
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="consistency">Consistency (0-1)</label>
+            <input
+              id="consistency"
+              type="number"
+              step="0.05"
+              min={0}
+              max={1}
+              value={bowler.consistency}
+              onChange={(event) =>
+                updateBowler('consistency', event.target.value)
+              }
+            />
+          </div>
+        </div>
+        <button type="button" onClick={onSubmit} disabled={isLoading}>
+          {isLoading ? 'Analyzing…' : 'Get Recommendation'}
+        </button>
+      </section>
+
+      {result && (
+        <section className="card">
+          <h2>Recommendations</h2>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-label">Pattern Difficulty</span>
+              <span className="stat-value">
+                {result.pattern_difficulty_score}
+              </span>
+              <span className="subtext">
+                {result.pattern_difficulty_label}
+              </span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Rule of 31 Breakpoint</span>
+              <span className="stat-value">
+                {result.breakpoint_board}
+              </span>
+              <span className="subtext">board</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Bowler Type</span>
+              <span className="stat-value stat-type">
+                {result.bowler_type.replace('_', ' ')}
+              </span>
+            </div>
+          </div>
+
+          {result.recommendations.map((rec) => (
+            <article className="ball-card" key={rec.rank}>
+              <div className="ball-card-head">
+                <span
+                  className={`recommendation-rank rank-${
+                    RANK_LABELS[rec.rank] ?? 'other'
+                  }`}
+                >
+                  #{rec.rank}
+                </span>
+                <strong>{rec.ball_name}</strong>
+              </div>
+              <div className="fit-score-bar">
+                <div
+                  className="fit-score-fill"
+                  style={{ width: `${rec.fit_score}%` }}
+                />
+              </div>
+              <p className="subtext">
+                Fit {rec.fit_score}/100 · Confidence{' '}
+                {Math.round(rec.confidence * 100)}% · Strike{' '}
+                {Math.round(rec.strike_probability * 100)}%
+              </p>
+              <ul>
+                {rec.reasoning.map((reason, index) => (
+                  <li key={index}>{reason}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </section>
+      )}
+    </section>
   );
 }

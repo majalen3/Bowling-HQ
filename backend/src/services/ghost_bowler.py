@@ -12,7 +12,7 @@ from src.models.ghost_bowler import (
     SessionTypeBreakdown,
 )
 
-DEFAULT_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+from src.services.session_progress import DEMO_USER_ID as DEFAULT_USER_ID
 
 # Scales standard deviation of scores into a 1-100 consistency score. A
 # stdev of 0 maps to a perfect 100; a stdev of ~66 (an unusually erratic

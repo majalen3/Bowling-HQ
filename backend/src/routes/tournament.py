@@ -11,12 +11,13 @@ from src.models.tournament import (
     TournamentLineupDetail,
 )
 from src.services.tournament import (
-    add_ball_to_lineup,
+    add_lineup_ball,
     create_lineup,
+    delete_lineup,
     get_lineup,
     list_lineups,
     recommend_lineup,
-    remove_ball_from_lineup,
+    remove_lineup_ball,
 )
 
 router = APIRouter(prefix="/api/v1/tournament", tags=["tournament"])
@@ -47,18 +48,27 @@ def read_lineup(lineup_id: UUID) -> TournamentLineupDetail:
     return lineup
 
 
+@router.delete("/lineups/{lineup_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_lineup_route(lineup_id: UUID) -> None:
+    if not delete_lineup(lineup_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lineup not found",
+        )
+
+
 @router.post(
     "/lineups/{lineup_id}/recommend",
     response_model=list[LineupRecommendation],
 )
 def recommend_lineup_route(lineup_id: UUID) -> list[LineupRecommendation]:
-    try:
-        return recommend_lineup(lineup_id)
-    except KeyError as error:
+    result = recommend_lineup(lineup_id)
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Lineup not found",
-        ) from error
+        )
+    return result
 
 
 @router.post(
@@ -70,18 +80,13 @@ def add_lineup_ball_route(
     lineup_id: UUID,
     payload: LineupBallAddRequest,
 ) -> LineupBall:
-    try:
-        return add_ball_to_lineup(lineup_id, payload)
-    except KeyError as error:
+    result = add_lineup_ball(lineup_id, payload)
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lineup not found",
-        ) from error
-    except ValueError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(error),
-        ) from error
+            detail="Lineup or ball not found",
+        )
+    return result
 
 
 @router.delete(
@@ -89,10 +94,8 @@ def add_lineup_ball_route(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def remove_lineup_ball_route(lineup_id: UUID, lineup_ball_id: UUID) -> None:
-    try:
-        remove_ball_from_lineup(lineup_id, lineup_ball_id)
-    except KeyError as error:
+    if not remove_lineup_ball(lineup_id, lineup_ball_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Lineup ball not found",
-        ) from error
+        )
