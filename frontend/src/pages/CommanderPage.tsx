@@ -287,8 +287,8 @@ export function CommanderPage() {
             onChange={(event) => setSelectedBallId(event.target.value)}
             disabled={isLoading || result.recommendations.length === 0}
           >
-            {result.recommendations.map((rec, index) => (
-              <option key={`${rec.ball_id ?? rec.ball_name}-${index}`} value={rec.ball_id ?? ''}>
+            {result.recommendations.map((rec) => (
+              <option key={rec.ball_id ?? `rank-${rec.rank}`} value={rec.ball_id ?? ''}>
                 #{rec.rank} {rec.ball_name} ({rec.fit_score}/100)
               </option>
             ))}
@@ -322,7 +322,7 @@ export function CommanderPage() {
           {simulation.notes.length > 0 && (
             <ul>
               {simulation.notes.map((note, index) => (
-                <li key={`${note}-${index}`}>{note}</li>
+                <li key={index}>{note}</li>
               ))}
             </ul>
           )}
