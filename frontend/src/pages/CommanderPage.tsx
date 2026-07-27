@@ -105,7 +105,7 @@ export function CommanderPage() {
         top_n: 3,
       });
       setResult(response);
-      setSelectedBallId(response.recommendations.find((rec) => rec.ball_id)?.ball_id ?? '');
+      setSelectedBallId(response.recommendations[0]?.ball_id ?? '');
     } catch (submitError) {
       setError(
         submitError instanceof Error

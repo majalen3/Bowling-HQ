@@ -102,7 +102,7 @@ describe('App', () => {
               coverstock: 'solid reactive',
               rg: 2.48,
               differential: 0.05,
-              mass_bias: 0.01,
+              mass_bias: 0.0,
               surface_grit: 2000,
               weight_lbs: 15,
               created_at: '2026-01-01T00:00:00Z',
