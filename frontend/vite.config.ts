@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const DEV_PORT = 5173;
+
 export default defineConfig({
   // base './' is required for Capacitor (loads from local filesystem)
   base: './',
@@ -37,4 +39,12 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: '0.0.0.0',
+    port: DEV_PORT,
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: DEV_PORT,
+  },
 });

@@ -123,6 +123,37 @@ button:disabled {
   padding: 0.85rem;
 }
 
+.nav-bar {
+  width: min(100%, 430px);
+  margin: 0 auto 0.75rem;
+  position: sticky;
+  top: 0.75rem;
+  z-index: 10;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.nav-link {
+  display: inline-block;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.nav-link-active {
+  background: linear-gradient(120deg, #0ea5e9, #3b82f6);
+  color: #f8fafc;
+  border-color: transparent;
+}
+
 [role='alert'] {
   margin: 0.5rem 0.25rem;
   color: #fca5a5;

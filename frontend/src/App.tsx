@@ -6,8 +6,11 @@ import { ArsenalPage } from './pages/ArsenalPage';
 import { AuthPage } from './pages/AuthPage';
 import { CommanderPage } from './pages/CommanderPage';
 import { DevPage } from './pages/DevPage';
+import { GhostBowlerPage } from './pages/GhostBowlerPage';
 import { HomePage } from './pages/HomePage';
+import { PatternsPage } from './pages/PatternsPage';
 import { SessionsPage } from './pages/SessionsPage';
+import { TournamentPage } from './pages/TournamentPage';
 
 export function App() {
   return (
@@ -19,6 +22,9 @@ export function App() {
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/arsenal" element={<ArsenalPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/patterns" element={<PatternsPage />} />
+          <Route path="/tournament" element={<TournamentPage />} />
+          <Route path="/ghost-bowler" element={<GhostBowlerPage />} />
           <Route path="/dev" element={<DevPage />} />
           <Route path="/auth" element={<AuthPage />} />
         </Routes>

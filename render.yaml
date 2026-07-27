@@ -1,0 +1,47 @@
+databases:
+  - name: bowling-hq-db
+    databaseName: bowling_hq
+    plan: free
+    user: bowling_hq
+
+services:
+  - type: web
+    name: bowling-hq-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: APP_NAME
+        value: Bowling-HQ API
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: API_PREFIX
+        value: /api/v1
+      - key: POSTGRES_URL
+        fromDatabase:
+          name: bowling-hq-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        fromService:
+          name: bowling-hq-frontend
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+    healthCheckPath: /health
+
+  - type: web
+    name: bowling-hq-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    rootDir: frontend
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: bowling-hq-backend
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL

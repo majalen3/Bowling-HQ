@@ -27,6 +27,17 @@ import type {
   UserLogin,
   UserResponse,
 } from '../types/auth';
+import type { CommanderRequestInput, CommanderResponse } from '../types/commander';
+import type { GhostBowlerProfile } from '../types/ghostBowler';
+import type { LanePattern, LanePatternDetail } from '../types/patterns';
+import type {
+  LineupBall,
+  LineupBallAddInput,
+  LineupCreateInput,
+  LineupRecommendation,
+  TournamentLineup,
+  TournamentLineupDetail,
+} from '../types/tournament';
 
 const runtimeEnv = typeof process !== 'undefined' ? process.env : undefined;
 
@@ -186,6 +197,8 @@ export async function importScores(
   return (await response.json()) as ScoreImportResult;
 }
 
+// --- Arsenal DNA ---
+
 export async function fetchArsenal(): Promise<ArsenalResponse> {
   const response = await fetch(`${apiConfig.baseUrl}/arsenal`);
 
@@ -239,6 +252,162 @@ export async function fetchBallCatalog(): Promise<BallItem[]> {
   return (await response.json()) as BallItem[];
 }
 
+// --- Commander AI ---
+
+export async function fetchCommanderRecommendation(
+  payload: CommanderRequestInput,
+): Promise<CommanderResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/commander/recommend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch recommendation (${response.status})`);
+  }
+
+  return (await response.json()) as CommanderResponse;
+}
+
+// --- Pattern Intelligence ---
+
+export async function fetchPatterns(filters?: {
+  difficulty?: number;
+  pattern_type?: string;
+}): Promise<LanePattern[]> {
+  const params = new URLSearchParams();
+  if (filters?.difficulty !== undefined) {
+    params.set('difficulty', String(filters.difficulty));
+  }
+  if (filters?.pattern_type) {
+    params.set('pattern_type', filters.pattern_type);
+  }
+  const query = params.toString();
+  const response = await fetch(
+    `${apiConfig.baseUrl}/patterns${query ? `?${query}` : ''}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to load patterns (${response.status})`);
+  }
+
+  return (await response.json()) as LanePattern[];
+}
+
+export async function fetchPatternDetail(patternId: string): Promise<LanePatternDetail> {
+  const response = await fetch(`${apiConfig.baseUrl}/patterns/${patternId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load pattern detail (${response.status})`);
+  }
+
+  return (await response.json()) as LanePatternDetail;
+}
+
+// --- Tournament Bag ---
+
+export async function fetchLineups(): Promise<TournamentLineup[]> {
+  const response = await fetch(`${apiConfig.baseUrl}/tournament/lineups`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load lineups (${response.status})`);
+  }
+
+  return (await response.json()) as TournamentLineup[];
+}
+
+export async function createLineup(
+  payload: LineupCreateInput,
+): Promise<TournamentLineup> {
+  const response = await fetch(`${apiConfig.baseUrl}/tournament/lineups`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create lineup (${response.status})`);
+  }
+
+  return (await response.json()) as TournamentLineup;
+}
+
+export async function fetchLineupDetail(
+  lineupId: string,
+): Promise<TournamentLineupDetail> {
+  const response = await fetch(`${apiConfig.baseUrl}/tournament/lineups/${lineupId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load lineup (${response.status})`);
+  }
+
+  return (await response.json()) as TournamentLineupDetail;
+}
+
+export async function recommendLineup(
+  lineupId: string,
+): Promise<LineupRecommendation[]> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/tournament/lineups/${lineupId}/recommend`,
+    { method: 'POST' },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to auto-fill lineup (${response.status})`);
+  }
+
+  return (await response.json()) as LineupRecommendation[];
+}
+
+export async function addLineupBall(
+  lineupId: string,
+  payload: LineupBallAddInput,
+): Promise<LineupBall> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/tournament/lineups/${lineupId}/balls`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to add ball to lineup (${response.status})`);
+  }
+
+  return (await response.json()) as LineupBall;
+}
+
+export async function removeLineupBall(
+  lineupId: string,
+  lineupBallId: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiConfig.baseUrl}/tournament/lineups/${lineupId}/balls/${lineupBallId}`,
+    { method: 'DELETE' },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to remove ball from lineup (${response.status})`);
+  }
+}
+
+// --- Ghost Bowler ---
+
+export async function fetchGhostBowlerProfile(): Promise<GhostBowlerProfile> {
+  const response = await fetch(`${apiConfig.baseUrl}/ghost-bowler/profile`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load ghost bowler profile (${response.status})`);
+  }
+
+  return (await response.json()) as GhostBowlerProfile;
+}
+
+// --- Recommendations (physics-based) ---
+
 export async function getOpeningBallRecommendation(
   payload: RecommendationRequest,
 ): Promise<RecommendationResponse> {
@@ -260,6 +429,8 @@ export async function getOpeningBallRecommendation(
   return (await response.json()) as RecommendationResponse;
 }
 
+// --- Analytics ---
+
 export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   const response = await fetch(`${apiConfig.baseUrl}/analytics/summary`);
 
@@ -269,6 +440,8 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
 
   return (await response.json()) as AnalyticsSummary;
 }
+
+// --- Auth ---
 
 export async function registerUser(
   payload: UserCreate,
