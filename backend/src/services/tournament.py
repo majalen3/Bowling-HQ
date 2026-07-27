@@ -176,7 +176,8 @@ def add_ball_to_lineup(
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT id FROM tournament_lineups WHERE id = %s AND user_id = %s",
+                "SELECT id FROM tournament_lineups "
+                "WHERE id = %s AND user_id = %s",
                 (lineup_id, user_id),
             )
             if cursor.fetchone() is None:
@@ -187,7 +188,9 @@ def add_ball_to_lineup(
                 (payload.user_arsenal_id, user_id),
             )
             if cursor.fetchone() is None:
-                raise ValueError(f"Arsenal item {payload.user_arsenal_id} not found")
+                raise ValueError(
+                    f"Arsenal item {payload.user_arsenal_id} not found"
+                )
 
             cursor.execute(
                 "SELECT COALESCE(MAX(order_index), -1) + 1 AS next_index "
@@ -283,7 +286,8 @@ def _score_arsenal_ball(
         if hook_min <= hook <= hook_max:
             score += 30
             reasoning_parts.append(
-                f"Hook potential {hook} is within the pattern's recommended range.",
+                f"Hook potential {hook} is within "
+                f"the pattern's recommended range.",
             )
         else:
             distance = min(abs(hook - hook_min), abs(hook - hook_max))
@@ -292,7 +296,9 @@ def _score_arsenal_ball(
                 f"Hook potential {hook} is outside the pattern's ideal range.",
             )
     else:
-        reasoning_parts.append("No target pattern specified; scored on general versatility.")
+        reasoning_parts.append(
+            "No target pattern specified; scored on general versatility."
+        )
 
     weight = _STRATEGY_WEIGHT.get(strategy or "versatile", 0)
     score += weight * (hook - 5) * 2
@@ -371,7 +377,9 @@ def recommend_lineup(
 
     recommendations: list[LineupRecommendation] = []
     role_pool = ["primary", "secondary", "tertiary"]
-    for index, (score, reasoning, row) in enumerate(remaining[: len(role_pool)]):
+    for index, (score, reasoning, row) in enumerate(
+        remaining[: len(role_pool)]
+    ):
         recommendations.append(
             LineupRecommendation(
                 user_arsenal_id=row["user_arsenal_id"],
@@ -387,7 +395,10 @@ def recommend_lineup(
             LineupRecommendation(
                 user_arsenal_id=spare_row["user_arsenal_id"],
                 role="spare",
-                reasoning=f"Lowest hook potential in your arsenal: {spare_reasoning}",
+                reasoning=(
+                    "Lowest hook potential in your arsenal: "
+                    f"{spare_reasoning}"
+                ),
                 ball=_row_to_ball(spare_row),
             ),
         )
