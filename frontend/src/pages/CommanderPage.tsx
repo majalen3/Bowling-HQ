@@ -321,8 +321,8 @@ export function CommanderPage() {
           <p>Confidence: {Math.round(simulation.confidence * 100)}%</p>
           {simulation.notes.length > 0 && (
             <ul>
-              {simulation.notes.map((note) => (
-                <li key={note}>{note}</li>
+              {simulation.notes.map((note, index) => (
+                <li key={`${note}-${index}`}>{note}</li>
               ))}
             </ul>
           )}
