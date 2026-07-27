@@ -206,7 +206,7 @@ def remove_from_arsenal(
 
 
 def get_arsenal_with_balls(user_id: UUID = DEFAULT_USER_ID) -> list[dict]:
-    """Return arsenal rows joined with ball data for use by other services."""
+    """Return raw arsenal rows joined with ball data for other services."""
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(

@@ -91,7 +91,10 @@ def _consistency_score(scores: list[int]) -> int:
     # recreational to advanced bowlers. Scaling by CONSISTENCY_SCALE_FACTOR
     # maps a stdev of 0 to a perfect 100 and a stdev of ~66 down to the
     # floor of 1, so the score degrades smoothly across that realistic range.
-    score = max(1, min(100, round(100 - stdev * CONSISTENCY_SCALE_FACTOR)))
+    score = max(
+        1,
+        min(100, round(100 - stdev * CONSISTENCY_SCALE_FACTOR)),
+    )
     return score
 
 
@@ -123,8 +126,10 @@ def get_profile(user_id: UUID = DEFAULT_USER_ID) -> GhostBowlerProfile:
             session_type_rows = cursor.fetchall()
 
             cursor.execute(
-                "SELECT COUNT(*) AS count "
-                "FROM bowling_sessions WHERE user_id = %s",
+                (
+                    "SELECT COUNT(*) AS count FROM bowling_sessions "
+                    "WHERE user_id = %s"
+                ),
                 (user_id,),
             )
             total_sessions = cursor.fetchone()["count"]
@@ -145,7 +150,8 @@ def get_profile(user_id: UUID = DEFAULT_USER_ID) -> GhostBowlerProfile:
         total_sessions=total_sessions,
         sessions_by_type=[
             SessionTypeBreakdown(
-                session_type=row["session_type"], count=row["count"]
+                session_type=row["session_type"],
+                count=row["count"],
             )
             for row in session_type_rows
         ],

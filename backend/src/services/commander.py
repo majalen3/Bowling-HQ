@@ -27,13 +27,17 @@ def _oil_score(ball_oil: str | None, lane_condition: str) -> tuple[int, str]:
     if not ball_oil:
         return 20, "No oil rating on file, treated as a neutral option."
     if ball_oil == "any":
-        return 35, (
-            "Versatile spare-friendly coverstock works across conditions."
+        return (
+            35,
+            "Versatile spare-friendly coverstock works across conditions.",
         )
     if ball_oil == lane_condition:
-        return 40, (
-            f"Built for exactly this "
-            f"{lane_condition.replace('_', ' ')} condition."
+        return (
+            40,
+            (
+                "Built for exactly this "
+                f"{lane_condition.replace('_', ' ')} condition."
+            ),
         )
     try:
         ball_index = _OIL_ORDER.index(ball_oil)
@@ -50,7 +54,8 @@ def _oil_score(ball_oil: str | None, lane_condition: str) -> tuple[int, str]:
 
 
 def _release_score(
-    hook_potential: int | None, release_style: str
+    hook_potential: int | None,
+    release_style: str,
 ) -> tuple[int, str]:
     hook = hook_potential if hook_potential is not None else 5
     target = {"controlled": 3, "balanced": 6, "power": 9}[release_style]
@@ -71,7 +76,8 @@ def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
         max(
             1,
             round(
-                (ball_speed - BALL_SPEED_FLOOR_MPH) / SPEED_TO_LENGTH_DIVISOR
+                (ball_speed - BALL_SPEED_FLOOR_MPH)
+                / SPEED_TO_LENGTH_DIVISOR,
             ),
         ),
     )
@@ -84,10 +90,11 @@ def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
 
 
 def _pattern_score(
-    core_type: str | None, pattern_difficulty: int
+    core_type: str | None,
+    pattern_difficulty: int,
 ) -> tuple[int, str]:
-    # Harder patterns reward stronger, asymmetrical cores.
-    # Easier ones favor symmetrical cores.
+    # Harder patterns reward stronger, asymmetrical cores; easier ones
+    # favor symmetrical.
     if core_type == "asymmetrical":
         score = 10 + pattern_difficulty * 2.5
     else:
@@ -100,10 +107,12 @@ def _pattern_score(
 
 
 def _score_ball(
-    ball: BowlingBall, request: CommanderRequest
+    ball: BowlingBall,
+    request: CommanderRequest,
 ) -> tuple[int, str]:
     oil_pts, oil_reason = _oil_score(
-        ball.oil_condition, request.lane_condition
+        ball.oil_condition,
+        request.lane_condition,
     )
     release_pts, release_reason = _release_score(
         ball.hook_potential, request.release_style,
@@ -114,13 +123,14 @@ def _score_ball(
     )
     total = oil_pts + release_pts + length_pts + pattern_pts
     reasoning = " ".join(
-        [oil_reason, release_reason, length_reason, pattern_reason]
+        [oil_reason, release_reason, length_reason, pattern_reason],
     )
     return total, reasoning
 
 
 def recommend(
-    request: CommanderRequest, user_id: UUID = DEFAULT_USER_ID
+    request: CommanderRequest,
+    user_id: UUID = DEFAULT_USER_ID,
 ) -> CommanderResponse:
     arsenal_rows = get_arsenal_with_balls(user_id=user_id)
     from_arsenal = bool(arsenal_rows)
@@ -171,5 +181,6 @@ def recommend(
         )
 
     return CommanderResponse(
-        from_arsenal=from_arsenal, recommendations=recommendations
+        from_arsenal=from_arsenal,
+        recommendations=recommendations,
     )

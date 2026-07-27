@@ -176,20 +176,25 @@ def add_ball_to_lineup(
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT id FROM tournament_lineups "
-                "WHERE id = %s AND user_id = %s",
+                (
+                    "SELECT id FROM tournament_lineups "
+                    "WHERE id = %s AND user_id = %s"
+                ),
                 (lineup_id, user_id),
             )
             if cursor.fetchone() is None:
                 raise KeyError(f"Lineup {lineup_id} not found")
 
             cursor.execute(
-                "SELECT id FROM user_arsenal WHERE id = %s AND user_id = %s",
+                (
+                    "SELECT id FROM user_arsenal "
+                    "WHERE id = %s AND user_id = %s"
+                ),
                 (payload.user_arsenal_id, user_id),
             )
             if cursor.fetchone() is None:
                 raise ValueError(
-                    f"Arsenal item {payload.user_arsenal_id} not found"
+                    f"Arsenal item {payload.user_arsenal_id} not found",
                 )
 
             cursor.execute(
@@ -286,8 +291,10 @@ def _score_arsenal_ball(
         if hook_min <= hook <= hook_max:
             score += 30
             reasoning_parts.append(
-                f"Hook potential {hook} is within "
-                f"the pattern's recommended range.",
+                (
+                    f"Hook potential {hook} is within "
+                    "the pattern's recommended range."
+                ),
             )
         else:
             distance = min(abs(hook - hook_min), abs(hook - hook_max))
@@ -297,7 +304,7 @@ def _score_arsenal_ball(
             )
     else:
         reasoning_parts.append(
-            "No target pattern specified; scored on general versatility."
+            "No target pattern specified; scored on general versatility.",
         )
 
     weight = _STRATEGY_WEIGHT.get(strategy or "versatile", 0)
@@ -378,7 +385,7 @@ def recommend_lineup(
     recommendations: list[LineupRecommendation] = []
     role_pool = ["primary", "secondary", "tertiary"]
     for index, (score, reasoning, row) in enumerate(
-        remaining[: len(role_pool)]
+        remaining[: len(role_pool)],
     ):
         recommendations.append(
             LineupRecommendation(
