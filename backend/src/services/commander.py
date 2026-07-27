@@ -27,9 +27,14 @@ def _oil_score(ball_oil: str | None, lane_condition: str) -> tuple[int, str]:
     if not ball_oil:
         return 20, "No oil rating on file, treated as a neutral option."
     if ball_oil == "any":
-        return 35, "Versatile spare-friendly coverstock works across conditions."
+        return 35, (
+            "Versatile spare-friendly coverstock works across conditions."
+        )
     if ball_oil == lane_condition:
-        return 40, f"Built for exactly this {lane_condition.replace('_', ' ')} condition."
+        return 40, (
+            f"Built for exactly this "
+            f"{lane_condition.replace('_', ' ')} condition."
+        )
     try:
         ball_index = _OIL_ORDER.index(ball_oil)
         lane_index = _OIL_ORDER.index(lane_condition)
@@ -39,11 +44,14 @@ def _oil_score(ball_oil: str | None, lane_condition: str) -> tuple[int, str]:
     score = max(0, 40 - distance * 12)
     return score, (
         f"Rated for {ball_oil.replace('_', ' ')}, "
-        f"{distance} step(s) from the {lane_condition.replace('_', ' ')} condition."
+        f"{distance} step(s) from the "
+        f"{lane_condition.replace('_', ' ')} condition."
     )
 
 
-def _release_score(hook_potential: int | None, release_style: str) -> tuple[int, str]:
+def _release_score(
+    hook_potential: int | None, release_style: str
+) -> tuple[int, str]:
     hook = hook_potential if hook_potential is not None else 5
     target = {"controlled": 3, "balanced": 6, "power": 9}[release_style]
     distance = abs(hook - target)
@@ -60,7 +68,9 @@ def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
     # reacting early. See the module-level constants for the mapping.
     target_length = min(
         MAX_LENGTH_RATING,
-        max(1, round((ball_speed - BALL_SPEED_FLOOR_MPH) / SPEED_TO_LENGTH_DIVISOR)),
+        max(1, round(
+            (ball_speed - BALL_SPEED_FLOOR_MPH) / SPEED_TO_LENGTH_DIVISOR
+        )),
     )
     distance = abs(ball_length - target_length)
     score = max(0, 20 - distance * 3)
@@ -70,8 +80,11 @@ def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
     )
 
 
-def _pattern_score(core_type: str | None, pattern_difficulty: int) -> tuple[int, str]:
-    # Harder patterns reward stronger, asymmetrical cores; easier ones favor symmetrical.
+def _pattern_score(
+    core_type: str | None, pattern_difficulty: int
+) -> tuple[int, str]:
+    # Harder patterns reward stronger, asymmetrical cores;
+    # easier ones favor symmetrical.
     if core_type == "asymmetrical":
         score = 10 + pattern_difficulty * 2.5
     else:
@@ -83,8 +96,12 @@ def _pattern_score(core_type: str | None, pattern_difficulty: int) -> tuple[int,
     )
 
 
-def _score_ball(ball: BowlingBall, request: CommanderRequest) -> tuple[int, str]:
-    oil_pts, oil_reason = _oil_score(ball.oil_condition, request.lane_condition)
+def _score_ball(
+    ball: BowlingBall, request: CommanderRequest
+) -> tuple[int, str]:
+    oil_pts, oil_reason = _oil_score(
+        ball.oil_condition, request.lane_condition
+    )
     release_pts, release_reason = _release_score(
         ball.hook_potential, request.release_style,
     )
@@ -93,11 +110,15 @@ def _score_ball(ball: BowlingBall, request: CommanderRequest) -> tuple[int, str]
         ball.core_type, request.pattern_difficulty,
     )
     total = oil_pts + release_pts + length_pts + pattern_pts
-    reasoning = " ".join([oil_reason, release_reason, length_reason, pattern_reason])
+    reasoning = " ".join(
+        [oil_reason, release_reason, length_reason, pattern_reason]
+    )
     return total, reasoning
 
 
-def recommend(request: CommanderRequest, user_id: UUID = DEFAULT_USER_ID) -> CommanderResponse:
+def recommend(
+    request: CommanderRequest, user_id: UUID = DEFAULT_USER_ID
+) -> CommanderResponse:
     arsenal_rows = get_arsenal_with_balls(user_id=user_id)
     from_arsenal = bool(arsenal_rows)
 
@@ -146,4 +167,6 @@ def recommend(request: CommanderRequest, user_id: UUID = DEFAULT_USER_ID) -> Com
             ),
         )
 
-    return CommanderResponse(from_arsenal=from_arsenal, recommendations=recommendations)
+    return CommanderResponse(
+        from_arsenal=from_arsenal, recommendations=recommendations
+    )

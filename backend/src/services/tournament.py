@@ -176,7 +176,8 @@ def add_ball_to_lineup(
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT id FROM tournament_lineups WHERE id = %s AND user_id = %s",
+                "SELECT id FROM tournament_lineups "
+                "WHERE id = %s AND user_id = %s",
                 (lineup_id, user_id),
             )
             if cursor.fetchone() is None:
