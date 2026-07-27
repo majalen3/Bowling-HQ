@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   analyzePattern,
+  fetchBallCatalog,
   getCommanderRecommendation,
   getOpeningBallRecommendation,
   runBallSimulator,
 } from '../services/api';
+import type { BallItem } from '../types/arsenal';
 import type { CommanderResponse } from '../types/commander';
 import type {
   BowlerInput,
@@ -44,8 +46,43 @@ export function CommanderPage() {
   const [patternResult, setPatternResult] = useState<PatternAnalysisResponse | null>(null);
   const [simulation, setSimulation] = useState<SimulatorResponse | null>(null);
   const [orchestration, setOrchestration] = useState<CommanderResponse | null>(null);
+  const [catalog, setCatalog] = useState<BallItem[]>([]);
+  const [selectedBallId, setSelectedBallId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadCatalog = async (): Promise<void> => {
+      try {
+        const balls = await fetchBallCatalog();
+        if (active) {
+          setCatalog(balls);
+        }
+      } catch {
+        if (active) {
+          setCatalog([]);
+        }
+      }
+    };
+    loadCatalog();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selectedRecommendation = useMemo(() => {
+    if (!result?.recommendations.length) {
+      return null;
+    }
+    if (selectedBallId) {
+      const picked = result.recommendations.find((rec) => rec.ball_id === selectedBallId);
+      if (picked) {
+        return picked;
+      }
+    }
+    return result.recommendations[0];
+  }, [result, selectedBallId]);
 
   const updatePattern = (key: keyof PatternInput, value: string): void => {
     setPattern((prev) => ({
@@ -68,6 +105,7 @@ export function CommanderPage() {
         top_n: 3,
       });
       setResult(response);
+      setSelectedBallId(response.recommendations.find((rec) => rec.ball_id)?.ball_id ?? '');
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -96,11 +134,19 @@ export function CommanderPage() {
   };
 
   const onRunSimulation = async (): Promise<void> => {
-    if (!result?.recommendations[0]) {
-      setError('Get recommendations first to simulate the top ball.');
+    if (!selectedRecommendation) {
+      setError('Get recommendations first to simulate a ball.');
       return;
     }
-    const topBall = result.recommendations[0];
+    if (!selectedRecommendation.ball_id) {
+      setError('Selected recommendation is missing a ball id. Pick another recommendation.');
+      return;
+    }
+    const selectedBall = catalog.find((ball) => ball.id === selectedRecommendation.ball_id);
+    if (!selectedBall) {
+      setError('Could not resolve selected ball from catalog. Refresh and try again.');
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -109,12 +155,12 @@ export function CommanderPage() {
           pattern,
           bowler,
           ball: {
-            name: topBall.ball_name,
-            coverstock: 'solid reactive',
-            rg: 2.5,
-            differential: 0.045,
-            mass_bias: 0,
-            surface_grit: 3000,
+            name: selectedBall.name,
+            coverstock: selectedBall.coverstock,
+            rg: selectedBall.rg,
+            differential: selectedBall.differential,
+            mass_bias: selectedBall.mass_bias,
+            surface_grit: selectedBall.surface_grit,
           },
         }),
       );
@@ -231,6 +277,28 @@ export function CommanderPage() {
         </button>
       </section>
 
+      {result && (
+        <section className="card">
+          <h2>Ball Selection</h2>
+          <label htmlFor="selectedBall">Simulation ball</label>
+          <select
+            id="selectedBall"
+            value={selectedRecommendation?.ball_id ?? ''}
+            onChange={(event) => setSelectedBallId(event.target.value)}
+            disabled={isLoading || result.recommendations.length === 0}
+          >
+            {result.recommendations.map((rec) => (
+              <option key={`${rec.rank}-${rec.ball_id ?? rec.ball_name}`} value={rec.ball_id ?? ''}>
+                #{rec.rank} {rec.ball_name} ({rec.fit_score}/100)
+              </option>
+            ))}
+          </select>
+          <p className="subtext">
+            Select a recommended ball, then run the simulator with real catalog specs.
+          </p>
+        </section>
+      )}
+
       {patternResult && (
         <section className="card">
           <h2>Pattern Intelligence</h2>
@@ -251,6 +319,13 @@ export function CommanderPage() {
           </p>
           <p>Strike probability: {Math.round(simulation.strike_probability * 100)}%</p>
           <p>Confidence: {Math.round(simulation.confidence * 100)}%</p>
+          {simulation.notes.length > 0 && (
+            <ul>
+              {simulation.notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -267,6 +342,24 @@ export function CommanderPage() {
               <li key={reason}>{reason}</li>
             ))}
           </ul>
+          {orchestration.top_ball_simulation ? (
+            <>
+              <p>
+                Digital Twin range:{' '}
+                <strong>
+                  {orchestration.top_ball_simulation.confidence_low}-
+                  {orchestration.top_ball_simulation.confidence_high}
+                </strong>{' '}
+                (predicted {orchestration.top_ball_simulation.predicted_score})
+              </p>
+              <p>
+                Top-ball strike probability:{' '}
+                {Math.round(orchestration.top_ball_simulation.strike_probability * 100)}%
+              </p>
+            </>
+          ) : (
+            <p className="subtext">Digital Twin simulation unavailable for the current top recommendation.</p>
+          )}
         </section>
       )}
 
