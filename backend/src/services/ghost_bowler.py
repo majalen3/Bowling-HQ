@@ -28,7 +28,11 @@ class GhostBowlerRepository(Protocol):
     def list_games(self, user_id: UUID) -> list[ScoredGame]:
         ...
 
-    def save_baseline(self, user_id: UUID, baseline: GhostBowlerBaselineResponse) -> None:
+    def save_baseline(
+        self,
+        user_id: UUID,
+        baseline: GhostBowlerBaselineResponse,
+    ) -> None:
         ...
 
 
@@ -50,9 +54,20 @@ class PostgresGhostBowlerRepository:
                     (user_id,),
                 )
                 rows = cursor.fetchall()
-        return [ScoredGame(score=int(r["score"]), session_type=r["session_type"], started_at=r["started_at"]) for r in rows]
+        return [
+            ScoredGame(
+                score=int(row["score"]),
+                session_type=row["session_type"],
+                started_at=row["started_at"],
+            )
+            for row in rows
+        ]
 
-    def save_baseline(self, user_id: UUID, baseline: GhostBowlerBaselineResponse) -> None:
+    def save_baseline(
+        self,
+        user_id: UUID,
+        baseline: GhostBowlerBaselineResponse,
+    ) -> None:
         with connect(self.postgres_url, row_factory=dict_row) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
@@ -91,7 +106,8 @@ def _condition_family(session_type: str) -> str:
 
 def _rates_from_average(average_score: float) -> tuple[float, float, float]:
     strike_rate = min(0.75, max(0.12, round((average_score - 110) / 180, 3)))
-    spare_rate = min(0.90, max(0.25, round(0.65 - (strike_rate - 0.35) * 0.3, 3)))
+    spare_rate = min(0.90, max(0.25, round(
+        0.65 - (strike_rate - 0.35) * 0.3, 3)))
     open_rate = max(0.02, round(1.0 - strike_rate - spare_rate, 3))
     return strike_rate, spare_rate, open_rate
 

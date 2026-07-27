@@ -7,7 +7,12 @@ from uuid import UUID, uuid4
 from psycopg import connect
 from psycopg.rows import dict_row
 
-from services.physics_engine import BallSpec, BowlerProfile, OilPattern, predict_ball_path
+from services.physics_engine import (
+    BallSpec,
+    BowlerProfile,
+    OilPattern,
+    predict_ball_path,
+)
 from src.config import get_settings
 from src.models.simulator import SimulatorRequest, SimulatorResponse
 
@@ -27,7 +32,10 @@ class PostgresSimulatorRepository:
         self.postgres_url = postgres_url
 
     def log_run(
-        self, user_id: UUID, request: SimulatorRequest, response: SimulatorResponse
+        self,
+        user_id: UUID,
+        request: SimulatorRequest,
+        response: SimulatorResponse,
     ) -> None:
         with connect(self.postgres_url, row_factory=dict_row) as conn:
             with conn.cursor() as cursor:
@@ -93,8 +101,24 @@ def run_simulation(
     )
 
     path = predict_ball_path(pattern, ball, bowler)
-    predicted_score = int(round(min(300, max(0, bowler.average * 0.58 + path.strike_probability * 120))))
-    spread = int(round((1 - bowler.consistency) * 28 + (1 - path.confidence) * 22))
+    predicted_score = int(
+        round(
+            min(
+                300,
+                max(
+                    0,
+                    bowler.average * 0.58
+                    + path.strike_probability * 120,
+                ),
+            )
+        )
+    )
+    spread = int(
+        round(
+            (1 - bowler.consistency) * 28
+            + (1 - path.confidence) * 22
+        )
+    )
     response = SimulatorResponse(
         predicted_score=predicted_score,
         confidence_low=max(0, predicted_score - spread),
@@ -104,8 +128,14 @@ def run_simulation(
         breakpoint_board=path.breakpoint_board,
         entry_angle_deg=path.entry_angle_deg,
         notes=[
-            f"Skid {path.skid_ft}ft, hook {path.hook_ft}ft, roll {path.roll_ft}ft.",
-            "Use this as a first-pass lane play estimate before live adjustments.",
+            (
+                f"Skid {path.skid_ft}ft, hook {path.hook_ft}ft, "
+                f"roll {path.roll_ft}ft."
+            ),
+            (
+                "Use this as a first-pass lane play estimate before "
+                "live adjustments."
+            ),
         ],
     )
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
 from uuid import UUID
 
 from src.models.commander import CommanderRequest, CommanderResponse
@@ -18,7 +17,10 @@ def get_commander_recommendation(
     user_id: UUID,
 ) -> CommanderResponse:
     ghost = get_ghost_bowler_baseline(user_id)
-    pattern = analyze_pattern(PatternAnalysisRequest(pattern=request.pattern), user_id)
+    pattern = analyze_pattern(
+        PatternAnalysisRequest(pattern=request.pattern),
+        user_id,
+    )
     opening = get_opening_ball_recommendation(request)
 
     top_simulation = None
@@ -44,7 +46,11 @@ def get_commander_recommendation(
                 user_id,
             )
 
-    confidence_factors = [opening.recommendations[0].confidence if opening.recommendations else 0.5]
+    confidence_factors = [
+        opening.recommendations[0].confidence
+        if opening.recommendations
+        else 0.5
+    ]
     if top_simulation:
         confidence_factors.append(top_simulation.confidence)
     confidence_factors.append(max(0.5, 1 - abs(pattern.transition_rate - 0.5)))
@@ -52,15 +58,25 @@ def get_commander_recommendation(
 
     rationale = [
         f"Ghost baseline average: {ghost.overall.average_score}.",
-        f"Pattern difficulty is {pattern.difficulty_label} ({pattern.difficulty_score}).",
+        (
+            f"Pattern difficulty is {pattern.difficulty_label} "
+            f"({pattern.difficulty_score})."
+        ),
     ]
     if opening.recommendations:
         rationale.append(
-            f"Top ball fit: {opening.recommendations[0].ball_name} ({opening.recommendations[0].fit_score}/100)."
+            (
+                f"Top ball fit: {opening.recommendations[0].ball_name} "
+                f"({opening.recommendations[0].fit_score}/100)."
+            )
         )
     if top_simulation:
         rationale.append(
-            f"Simulated score range {top_simulation.confidence_low}-{top_simulation.confidence_high}."
+            (
+                "Simulated score range "
+                f"{top_simulation.confidence_low}-"
+                f"{top_simulation.confidence_high}."
+            )
         )
 
     return CommanderResponse(

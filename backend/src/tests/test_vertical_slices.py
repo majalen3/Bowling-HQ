@@ -17,9 +17,12 @@ class FakeGhostRepo:
 
     def list_games(self, user_id: UUID) -> list[ScoredGame]:
         return [
-            ScoredGame(score=205, session_type='house', started_at=datetime.now(timezone.utc)),
-            ScoredGame(score=188, session_type='sport', started_at=datetime.now(timezone.utc)),
-            ScoredGame(score=176, session_type='dry', started_at=datetime.now(timezone.utc)),
+            ScoredGame(score=205, session_type='house',
+                       started_at=datetime.now(timezone.utc)),
+            ScoredGame(score=188, session_type='sport',
+                       started_at=datetime.now(timezone.utc)),
+            ScoredGame(score=176, session_type='dry',
+                       started_at=datetime.now(timezone.utc)),
         ]
 
     def save_baseline(self, user_id: UUID, baseline) -> None:
@@ -91,11 +94,30 @@ def make_ball(name: str = 'Storm Phaze II') -> BallItem:
 @pytest.fixture
 def vertical_slice_mocks(monkeypatch: pytest.MonkeyPatch):
     balls = [make_ball()]
-    monkeypatch.setattr('src.services.ghost_bowler.get_ghost_bowler_repository', lambda: FakeGhostRepo())
-    monkeypatch.setattr('src.services.pattern_intelligence.get_pattern_analysis_repository', lambda: FakePatternRepo())
-    monkeypatch.setattr('src.services.simulator.get_simulator_repository', lambda: FakeSimulatorRepo())
-    monkeypatch.setattr('src.services.recommendations.get_recommendation_repository', lambda: FakeRecommendationRepo(balls))
-    monkeypatch.setattr('src.services.arsenal.get_arsenal_repository', lambda: FakeArsenalRepo(balls))
+    monkeypatch.setattr(
+        'src.services.ghost_bowler.get_ghost_bowler_repository',
+        lambda: FakeGhostRepo(),
+    )
+    monkeypatch.setattr(
+        'src.services.pattern_intelligence.get_pattern_analysis_repository',
+        lambda: FakePatternRepo(),
+    )
+    monkeypatch.setattr(
+        'src.services.simulator.get_simulator_repository',
+        lambda: FakeSimulatorRepo(),
+    )
+    monkeypatch.setattr(
+        'src.services.recommendations.get_recommendation_repository',
+        lambda: FakeRecommendationRepo(balls),
+    )
+    monkeypatch.setattr(
+        'src.services.arsenal.get_arsenal_repository',
+        lambda: FakeArsenalRepo(balls),
+    )
+    monkeypatch.setattr(
+        'src.services.commander.get_arsenal_repository',
+        lambda: FakeArsenalRepo(balls),
+    )
 
 
 def _pattern() -> dict:
@@ -129,13 +151,20 @@ def test_ghost_bowler_endpoints(vertical_slice_mocks) -> None:
     assert payload['total_games'] == 3
     assert payload['overall']['average_score'] > 0
 
-    compare = client.get('/api/v1/ghost-bowler/compare?current_average=200&condition_family=house')
+    compare = client.get(
+        (
+            '/api/v1/ghost-bowler/compare?current_average=200'
+            '&condition_family=house'
+        )
+    )
     assert compare.status_code == 200
-    assert compare.json()['trend'] in {'above_baseline', 'below_baseline', 'even'}
+    assert compare.json()['trend'] in {
+        'above_baseline', 'below_baseline', 'even'}
 
 
 def test_pattern_analysis_endpoint(vertical_slice_mocks) -> None:
-    response = client.post('/api/v1/patterns/analyze', json={'pattern': _pattern()})
+    response = client.post('/api/v1/patterns/analyze',
+                           json={'pattern': _pattern()})
     assert response.status_code == 200
     payload = response.json()
     assert payload['difficulty_score'] >= 1

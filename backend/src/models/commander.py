@@ -2,7 +2,10 @@ from pydantic import BaseModel
 
 from src.models.ghost_bowler import GhostBowlerBaselineResponse
 from src.models.patterns import PatternAnalysisResponse
-from src.models.recommendations import RecommendationRequest, RecommendationResponse
+from src.models.recommendations import (
+    RecommendationRequest,
+    RecommendationResponse,
+)
 from src.models.simulator import SimulatorResponse
 
 

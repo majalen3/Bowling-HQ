@@ -413,7 +413,8 @@ def _fit_score_for_ball(
 
     if length >= 42 and ball.rg <= 2.5:
         score += 8
-        reasons.append("Lower RG helps the ball start sooner on long patterns.")
+        reasons.append(
+            "Lower RG helps the ball start sooner on long patterns.")
     if length <= 37 and ball.rg >= 2.52:
         score += 6
         reasons.append("Higher RG preserves energy on shorter patterns.")

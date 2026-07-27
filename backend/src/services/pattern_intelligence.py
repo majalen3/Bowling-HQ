@@ -13,7 +13,11 @@ from src.models.patterns import PatternAnalysisRequest, PatternAnalysisResponse
 
 
 class PatternAnalysisRepository(Protocol):
-    def log_analysis(self, user_id: UUID, response: PatternAnalysisResponse) -> None:
+    def log_analysis(
+        self,
+        user_id: UUID,
+        response: PatternAnalysisResponse,
+    ) -> None:
         ...
 
 
@@ -21,7 +25,11 @@ class PostgresPatternAnalysisRepository:
     def __init__(self, postgres_url: str) -> None:
         self.postgres_url = postgres_url
 
-    def log_analysis(self, user_id: UUID, response: PatternAnalysisResponse) -> None:
+    def log_analysis(
+        self,
+        user_id: UUID,
+        response: PatternAnalysisResponse,
+    ) -> None:
         with connect(self.postgres_url, row_factory=dict_row) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
@@ -69,7 +77,8 @@ def analyze_pattern(
     difficulty = calculate_pattern_difficulty(pattern)
     breakpoint_board = max(4.0, min(20.0, round(pattern.length_ft - 31, 1)))
 
-    transition_rate = min(1.0, max(0.0, round((pattern.volume_ml - 16) / 20, 2)))
+    transition_rate = min(
+        1.0, max(0.0, round((pattern.volume_ml - 16) / 20, 2)))
     transition_risk = "low"
     if transition_rate > 0.7:
         transition_risk = "high"
@@ -82,7 +91,8 @@ def analyze_pattern(
     ]
     if transition_risk == "high":
         guidance.append(
-            "Expect faster front-lane breakdown; plan at least one ball-down move."
+            "Expect faster front-lane breakdown; plan at least one "
+            "ball-down move."
         )
     elif transition_risk == "medium":
         guidance.append(
