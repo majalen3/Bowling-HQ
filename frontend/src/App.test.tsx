@@ -203,7 +203,7 @@ describe('App', () => {
       coverstock: 'pearl reactive',
       rg: 2.55,
       differential: 0.04,
-      mass_bias: 0,
+      mass_bias: 0.0,
       surface_grit: 4000,
     });
   });
