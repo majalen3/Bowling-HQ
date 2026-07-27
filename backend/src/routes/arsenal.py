@@ -41,7 +41,11 @@ def read_user_arsenal() -> list[ArsenalItem]:
     return list_user_arsenal()
 
 
-@router.post("", response_model=ArsenalItem, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ArsenalItem,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_arsenal_item(payload: ArsenalAddRequest) -> ArsenalItem:
     try:
         return add_to_arsenal(payload)
