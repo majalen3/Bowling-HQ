@@ -86,8 +86,8 @@ def _length_score(length: int | None, ball_speed: float) -> tuple[int, str]:
 def _pattern_score(
     core_type: str | None, pattern_difficulty: int
 ) -> tuple[int, str]:
-    # Harder patterns reward stronger, asymmetrical cores; easier ones
-    # favor symmetrical.
+    # Harder patterns reward stronger, asymmetrical cores.
+    # Easier ones favor symmetrical cores.
     if core_type == "asymmetrical":
         score = 10 + pattern_difficulty * 2.5
     else:
