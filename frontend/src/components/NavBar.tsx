@@ -5,6 +5,7 @@ const LINKS: Array<{ to: string; label: string }> = [
   { to: '/sessions', label: 'Sessions' },
   { to: '/arsenal', label: 'Arsenal' },
   { to: '/analytics', label: 'Analytics' },
+  { to: '/progress', label: 'Progress' },
   { to: '/dev', label: 'Dev' },
 ];
 

@@ -5,9 +5,11 @@ import {
   createSession,
   fetchProgressSnapshot,
   fetchSessionProgress,
+  getArsenalFit,
 } from '../services/api';
 import type { BoardStatus, ProgressSnapshot } from '../types/progress';
 import type { SessionProgressSnapshot } from '../types/sessionProgress';
+import type { ArsenalFitResponse } from '../types/arsenal';
 
 const BOARD_LABELS: Record<BoardStatus, string> = {
   backlog: 'Backlog',
@@ -15,69 +17,49 @@ const BOARD_LABELS: Record<BoardStatus, string> = {
   done: 'Done',
 };
 
-type LaneCondition = 'dry' | 'medium' | 'heavy';
-type ReleaseStyle = 'controlled' | 'balanced' | 'power';
-
-type ArsenalBall = {
-  id: string;
-  name: string;
-  laneStrength: LaneCondition;
-  releaseStyle: ReleaseStyle;
-  speedRange: [number, number];
-  notes: string;
-};
-
-const ARSENAL_BALLS: ArsenalBall[] = [
-  {
-    id: 'phaze-ii',
-    name: 'Storm Phaze II',
-    laneStrength: 'dry',
-    releaseStyle: 'controlled',
-    speedRange: [14, 17],
-    notes: 'Smooth read and reliable continuation for lighter friction.',
-  },
-  {
-    id: 'iq-tour',
-    name: 'Storm IQ Tour',
-    laneStrength: 'medium',
-    releaseStyle: 'balanced',
-    speedRange: [14, 18],
-    notes: 'Benchmark look for blended house conditions.',
-  },
-  {
-    id: 'zen-gold-label',
-    name: '900 Global Zen Gold Label',
-    laneStrength: 'heavy',
-    releaseStyle: 'power',
-    speedRange: [15, 19],
-    notes: 'Stronger move for fresh or tighter volumes.',
-  },
-];
-
 export function ProgressPage() {
   const [progress, setProgress] = useState<ProgressSnapshot | null>(null);
   const [sessionProgress, setSessionProgress] = useState<SessionProgressSnapshot | null>(null);
+  const [fit, setFit] = useState<ArsenalFitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionType, setSessionType] = useState('practice');
   const [locationName, setLocationName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [laneCondition, setLaneCondition] = useState<LaneCondition>('medium');
-  const [releaseStyle, setReleaseStyle] = useState<ReleaseStyle>('balanced');
-  const [ballSpeed, setBallSpeed] = useState(16);
-  const [selectedBallId, setSelectedBallId] = useState(ARSENAL_BALLS[1].id);
 
   useEffect(() => {
     let isActive = true;
 
     const load = async (): Promise<void> => {
       try {
-        const [snapshot, sessionsSnapshot] = await Promise.all([
+        const [snapshot, sessionsSnapshot, fitSnapshot] = await Promise.all([
           fetchProgressSnapshot(),
           fetchSessionProgress(),
+          getArsenalFit({
+            pattern: {
+              name: 'House Shot',
+              length_ft: 40,
+              volume_ml: 24,
+              asymmetry_index: 0,
+              front_oil_pct: 0.34,
+              mid_oil_pct: 0.33,
+              backend_oil_pct: 0.33,
+              lane_surface: 'synthetic',
+            },
+            bowler: {
+              average: 190,
+              speed_mph: 17,
+              rev_rate: 350,
+              axis_rotation_deg: 45,
+              axis_tilt_deg: 15,
+              consistency: 0.75,
+            },
+            top_n: 3,
+          }),
         ]);
         if (isActive) {
           setProgress(snapshot);
           setSessionProgress(sessionsSnapshot);
+          setFit(fitSnapshot);
           setError(null);
         }
       } catch (loadError) {
@@ -131,11 +113,7 @@ export function ProgressPage() {
       await refreshSnapshots();
       setError(null);
     } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : 'Failed to complete session',
-      );
+      setError(saveError instanceof Error ? saveError.message : 'Failed to complete session');
     } finally {
       setIsSaving(false);
     }
@@ -152,35 +130,6 @@ export function ProgressPage() {
       done: progress.board.filter((item) => item.status === 'done'),
     };
   }, [progress]);
-
-  const selectedBall = useMemo(
-    () => ARSENAL_BALLS.find((ball) => ball.id === selectedBallId) ?? ARSENAL_BALLS[0],
-    [selectedBallId],
-  );
-
-  const arsenalRecommendation = useMemo(() => {
-    let fitScore = 60;
-
-    fitScore += selectedBall.laneStrength === laneCondition ? 25 : -15;
-    fitScore += selectedBall.releaseStyle === releaseStyle ? 10 : -5;
-    fitScore +=
-      ballSpeed >= selectedBall.speedRange[0] && ballSpeed <= selectedBall.speedRange[1]
-        ? 10
-        : -10;
-
-    const boundedScore = Math.max(1, Math.min(99, fitScore));
-    const recommendation =
-      boundedScore >= 80
-        ? 'Go-to option for this look.'
-        : boundedScore >= 60
-          ? 'Playable choice with minor adjustments.'
-          : 'Consider switching balls for stronger shape match.';
-
-    return {
-      score: boundedScore,
-      recommendation,
-    };
-  }, [ballSpeed, laneCondition, releaseStyle, selectedBall]);
 
   return (
     <main className="app-shell">
@@ -254,53 +203,25 @@ export function ProgressPage() {
             </section>
 
             <section className="card">
-              <h2>Arsenal Simulator</h2>
-              <label htmlFor="laneCondition">Lane Condition</label>
-              <select
-                id="laneCondition"
-                value={laneCondition}
-                onChange={(event) => setLaneCondition(event.target.value as LaneCondition)}
-              >
-                <option value="dry">Dry</option>
-                <option value="medium">Medium</option>
-                <option value="heavy">Heavy</option>
-              </select>
-              <label htmlFor="releaseStyle">Release Style</label>
-              <select
-                id="releaseStyle"
-                value={releaseStyle}
-                onChange={(event) => setReleaseStyle(event.target.value as ReleaseStyle)}
-              >
-                <option value="controlled">Controlled</option>
-                <option value="balanced">Balanced</option>
-                <option value="power">Power</option>
-              </select>
-              <label htmlFor="ballSpeed">Ball Speed (mph)</label>
-              <input
-                id="ballSpeed"
-                type="number"
-                min={10}
-                max={22}
-                value={ballSpeed}
-                onChange={(event) => setBallSpeed(Number(event.target.value))}
-              />
-              <label htmlFor="ballSelect">Ball</label>
-              <select
-                id="ballSelect"
-                value={selectedBallId}
-                onChange={(event) => setSelectedBallId(event.target.value)}
-              >
-                {ARSENAL_BALLS.map((ball) => (
-                  <option key={ball.id} value={ball.id}>
-                    {ball.name}
-                  </option>
-                ))}
-              </select>
-              <p>
-                <strong>Fit Score:</strong> {arsenalRecommendation.score}/100
-              </p>
-              <p>{arsenalRecommendation.recommendation}</p>
-              <p className="subtext">{selectedBall.notes}</p>
+              <h2>Slice C: Arsenal Fit (Backend-Driven)</h2>
+              {!fit && <p className="subtext">Loading fit scores…</p>}
+              {fit?.recommendations.map((entry) => (
+                <article className="ball-card" key={entry.ball_id}>
+                  <div className="ball-card-head">
+                    <strong>
+                      #{entry.rank} {entry.ball_name}
+                    </strong>
+                  </div>
+                  <p className="subtext">
+                    Fit {entry.fit_score}/100 · Confidence {Math.round(entry.confidence * 100)}%
+                  </p>
+                  <ul>
+                    {entry.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </section>
 
             {(Object.keys(BOARD_LABELS) as BoardStatus[]).map((status) => (

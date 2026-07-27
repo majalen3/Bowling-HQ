@@ -9,11 +9,15 @@ from psycopg.rows import dict_row
 
 from src.config import get_settings
 from src.models.arsenal import (
+    ArsenalFitRecommendation,
+    ArsenalFitRequest,
+    ArsenalFitResponse,
     ArsenalResponse,
     BallCreate,
     BallItem,
     UserArsenalBall,
 )
+from src.models.recommendations import BowlerInput, PatternInput
 
 # Real balls with accurate published specs used to seed the catalog.
 BALL_CATALOG_SEED: list[dict] = [
@@ -379,3 +383,81 @@ def remove_from_arsenal(
 ) -> bool:
     repo = repository or get_arsenal_repository()
     return repo.remove_from_arsenal(user_id, arsenal_id)
+
+
+def _fit_score_for_ball(
+    pattern: PatternInput,
+    bowler: BowlerInput,
+    ball: BallItem,
+) -> tuple[float, float, list[str]]:
+    score = 60.0
+    reasons: list[str] = []
+    volume = pattern.volume_ml
+    length = pattern.length_ft
+    cover = ball.coverstock.lower()
+
+    if volume >= 27:
+        if "solid" in cover:
+            score += 15
+            reasons.append("Solid cover reads heavy volume earlier.")
+        elif "pearl" in cover:
+            score -= 10
+            reasons.append("Pearl shape can skid too long in heavy volume.")
+    elif volume <= 20:
+        if "pearl" in cover or "urethane" in cover:
+            score += 10
+            reasons.append("Cleaner cover controls drier front lanes.")
+        elif "solid" in cover:
+            score -= 8
+            reasons.append("Strong solid can over-read lighter oil.")
+
+    if length >= 42 and ball.rg <= 2.5:
+        score += 8
+        reasons.append("Lower RG helps the ball start sooner on long patterns.")
+    if length <= 37 and ball.rg >= 2.52:
+        score += 6
+        reasons.append("Higher RG preserves energy on shorter patterns.")
+
+    if bowler.speed_mph >= 17 and ball.differential >= 0.047:
+        score += 6
+        reasons.append("Differential supports flare for speed-dominant pace.")
+    if bowler.rev_rate >= 420 and ball.differential >= 0.052:
+        score -= 6
+        reasons.append("High rev rate plus high differential may over-hook.")
+
+    bounded = round(max(1.0, min(100.0, score)), 1)
+    confidence = round(max(0.45, min(0.95, 0.55 + bounded / 250)), 3)
+    if not reasons:
+        reasons.append("Benchmark shape fits a broad range of conditions.")
+    return bounded, confidence, reasons
+
+
+def get_arsenal_fit_recommendations(
+    user_id: UUID,
+    payload: ArsenalFitRequest,
+    repository: Optional[ArsenalRepository] = None,
+) -> ArsenalFitResponse:
+    repo = repository or get_arsenal_repository()
+    arsenal = repo.list_arsenal(user_id)
+    balls = [entry.ball for entry in arsenal] or repo.list_catalog()
+    ranked: list[ArsenalFitRecommendation] = []
+    for ball in balls:
+        fit_score, confidence, reasons = _fit_score_for_ball(
+            payload.pattern,
+            payload.bowler,
+            ball,
+        )
+        ranked.append(
+            ArsenalFitRecommendation(
+                rank=0,
+                ball_id=ball.id,
+                ball_name=ball.name,
+                fit_score=fit_score,
+                confidence=confidence,
+                reasons=reasons,
+            )
+        )
+    ranked.sort(key=lambda item: item.fit_score, reverse=True)
+    for index, recommendation in enumerate(ranked[: payload.top_n], start=1):
+        recommendation.rank = index
+    return ArsenalFitResponse(recommendations=ranked[: payload.top_n])

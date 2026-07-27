@@ -1,8 +1,14 @@
 import {
+  analyzePattern,
   completeSession,
+  compareGhostBowlerBaseline,
   createSession,
+  fetchGhostBowlerBaseline,
   fetchProgressSnapshot,
   fetchSessionProgress,
+  getArsenalFit,
+  getCommanderRecommendation,
+  runBallSimulator,
 } from './api';
 
 const originalFetch = global.fetch;
@@ -288,6 +294,210 @@ describe('recommendation and analytics helpers', () => {
     };
     mockFetch(payload);
     await expect(fetchAnalyticsSummary()).resolves.toEqual(payload);
+  });
+
+  it('fetches ghost bowler baseline', async () => {
+    const payload = {
+      total_games: 3,
+      overall: {
+        condition_family: 'overall',
+        game_count: 3,
+        average_score: 190,
+        score_band_low: 178,
+        score_band_high: 202,
+        strike_rate: 0.4,
+        spare_rate: 0.48,
+        open_frame_rate: 0.12,
+      },
+      by_condition: [],
+    };
+    mockFetch(payload);
+    await expect(fetchGhostBowlerBaseline()).resolves.toEqual(payload);
+  });
+
+  it('compares ghost baseline', async () => {
+    const payload = {
+      condition_family: 'house',
+      baseline_average: 190,
+      current_average: 195,
+      delta: 5,
+      trend: 'above_baseline',
+    };
+    mockFetch(payload);
+    await expect(compareGhostBowlerBaseline(195, 'house')).resolves.toEqual(payload);
+  });
+
+  it('analyzes a pattern', async () => {
+    const payload = {
+      pattern_name: 'House',
+      difficulty_score: 5.2,
+      difficulty_label: 'moderate',
+      breakpoint_board: 9,
+      transition_risk: 'medium',
+      transition_rate: 0.4,
+      guidance: [],
+    };
+    mockFetch(payload);
+    await expect(
+      analyzePattern({
+        pattern: {
+          name: 'House',
+          length_ft: 40,
+          volume_ml: 24,
+          asymmetry_index: 0,
+          front_oil_pct: 0.34,
+          mid_oil_pct: 0.33,
+          backend_oil_pct: 0.33,
+          lane_surface: 'synthetic',
+        },
+      }),
+    ).resolves.toEqual(payload);
+  });
+
+  it('runs ball simulator', async () => {
+    const payload = {
+      predicted_score: 196,
+      confidence_low: 182,
+      confidence_high: 208,
+      strike_probability: 0.49,
+      confidence: 0.73,
+      breakpoint_board: 9.2,
+      entry_angle_deg: 5.8,
+      notes: [],
+    };
+    mockFetch(payload);
+    await expect(
+      runBallSimulator({
+        pattern: {
+          name: 'House',
+          length_ft: 40,
+          volume_ml: 24,
+          asymmetry_index: 0,
+          front_oil_pct: 0.34,
+          mid_oil_pct: 0.33,
+          backend_oil_pct: 0.33,
+          lane_surface: 'synthetic',
+        },
+        bowler: {
+          average: 190,
+          speed_mph: 17,
+          rev_rate: 350,
+          axis_rotation_deg: 45,
+          axis_tilt_deg: 15,
+          consistency: 0.75,
+        },
+        ball: {
+          name: 'Storm Phaze II',
+          coverstock: 'solid reactive',
+          rg: 2.48,
+          differential: 0.048,
+          mass_bias: 0,
+          surface_grit: 3000,
+        },
+      }),
+    ).resolves.toEqual(payload);
+  });
+
+  it('scores arsenal fit', async () => {
+    const payload = {
+      recommendations: [
+        {
+          rank: 1,
+          ball_id: 'b1',
+          ball_name: 'Storm Phaze II',
+          fit_score: 82,
+          confidence: 0.88,
+          reasons: ['Good benchmark match'],
+        },
+      ],
+    };
+    mockFetch(payload);
+    await expect(
+      getArsenalFit({
+        pattern: {
+          name: 'House',
+          length_ft: 40,
+          volume_ml: 24,
+          asymmetry_index: 0,
+          front_oil_pct: 0.34,
+          mid_oil_pct: 0.33,
+          backend_oil_pct: 0.33,
+          lane_surface: 'synthetic',
+        },
+        bowler: {
+          average: 190,
+          speed_mph: 17,
+          rev_rate: 350,
+          axis_rotation_deg: 45,
+          axis_tilt_deg: 15,
+          consistency: 0.75,
+        },
+        top_n: 1,
+      }),
+    ).resolves.toEqual(payload);
+  });
+
+  it('runs commander orchestration', async () => {
+    const payload = {
+      ghost_bowler: {
+        total_games: 3,
+        overall: {
+          condition_family: 'overall',
+          game_count: 3,
+          average_score: 190,
+          score_band_low: 178,
+          score_band_high: 202,
+          strike_rate: 0.4,
+          spare_rate: 0.48,
+          open_frame_rate: 0.12,
+        },
+        by_condition: [],
+      },
+      pattern_analysis: {
+        pattern_name: 'House',
+        difficulty_score: 5.2,
+        difficulty_label: 'moderate',
+        breakpoint_board: 9,
+        transition_risk: 'medium',
+        transition_rate: 0.4,
+        guidance: [],
+      },
+      opening_ball: {
+        pattern_difficulty_score: 5.2,
+        pattern_difficulty_label: 'moderate',
+        breakpoint_board: 9,
+        recommendations: [],
+        bowler_type: 'tweener',
+        session_id: null,
+      },
+      top_ball_simulation: null,
+      confidence: 0.7,
+      rationale: [],
+    };
+    mockFetch(payload);
+    await expect(
+      getCommanderRecommendation({
+        pattern: {
+          name: 'House',
+          length_ft: 40,
+          volume_ml: 24,
+          asymmetry_index: 0,
+          front_oil_pct: 0.34,
+          mid_oil_pct: 0.33,
+          backend_oil_pct: 0.33,
+          lane_surface: 'synthetic',
+        },
+        bowler: {
+          average: 190,
+          speed_mph: 17,
+          rev_rate: 350,
+          axis_rotation_deg: 45,
+          axis_tilt_deg: 15,
+          consistency: 0.75,
+        },
+        top_n: 1,
+      }),
+    ).resolves.toEqual(payload);
   });
 });
 

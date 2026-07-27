@@ -10,16 +10,28 @@ import type {
   ScoreImportResult,
 } from '../types/games';
 import type {
+  ArsenalFitRequest,
+  ArsenalFitResponse,
   ArsenalResponse,
   BallItem,
   CreateAndAddBallRequest,
   UserArsenalBall,
 } from '../types/arsenal';
 import type {
+  GhostBowlerBaselineResponse,
+  GhostBowlerCompareResponse,
+} from '../types/ghostBowler';
+import type {
+  PatternAnalysisRequest,
+  PatternAnalysisResponse,
+} from '../types/patterns';
+import type {
   RecommendationRequest,
   RecommendationResponse,
 } from '../types/recommendations';
+import type { SimulatorRequest, SimulatorResponse } from '../types/simulator';
 import type { AnalyticsSummary } from '../types/analytics';
+import type { CommanderRequest, CommanderResponse } from '../types/commander';
 import type {
   Token,
   UserCreate,
@@ -220,6 +232,99 @@ export async function getOpeningBallRecommendation(
   }
 
   return (await response.json()) as RecommendationResponse;
+}
+
+export async function fetchGhostBowlerBaseline(): Promise<GhostBowlerBaselineResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/ghost-bowler`);
+  if (!response.ok) {
+    throw new Error(`Failed to load ghost bowler baseline (${response.status})`);
+  }
+  return (await response.json()) as GhostBowlerBaselineResponse;
+}
+
+export async function compareGhostBowlerBaseline(
+  currentAverage: number,
+  conditionFamily = 'overall',
+): Promise<GhostBowlerCompareResponse> {
+  const params = new URLSearchParams({
+    current_average: String(currentAverage),
+    condition_family: conditionFamily,
+  });
+  const response = await fetch(
+    `${apiConfig.baseUrl}/ghost-bowler/compare?${params.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to compare ghost baseline (${response.status})`);
+  }
+  return (await response.json()) as GhostBowlerCompareResponse;
+}
+
+export async function analyzePattern(
+  payload: PatternAnalysisRequest,
+): Promise<PatternAnalysisResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/patterns/analyze`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to analyze pattern (${response.status})`);
+  }
+
+  return (await response.json()) as PatternAnalysisResponse;
+}
+
+export async function runBallSimulator(
+  payload: SimulatorRequest,
+): Promise<SimulatorResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/simulator/run`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to run simulator (${response.status})`);
+  }
+
+  return (await response.json()) as SimulatorResponse;
+}
+
+export async function getArsenalFit(
+  payload: ArsenalFitRequest,
+): Promise<ArsenalFitResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/arsenal/fit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to score arsenal fit (${response.status})`);
+  }
+  return (await response.json()) as ArsenalFitResponse;
+}
+
+export async function getCommanderRecommendation(
+  payload: CommanderRequest,
+): Promise<CommanderResponse> {
+  const response = await fetch(`${apiConfig.baseUrl}/commander/recommendation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get commander recommendation (${response.status})`);
+  }
+  return (await response.json()) as CommanderResponse;
 }
 
 export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {

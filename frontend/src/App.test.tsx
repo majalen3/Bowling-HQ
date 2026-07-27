@@ -63,6 +63,7 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Sessions' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Arsenal' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Analytics' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Progress' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Dev' })).toBeInTheDocument();
   });
 

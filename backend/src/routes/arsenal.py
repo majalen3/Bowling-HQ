@@ -3,6 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from src.models.arsenal import (
+    ArsenalFitRequest,
+    ArsenalFitResponse,
     ArsenalResponse,
     BallCreate,
     BallItem,
@@ -12,6 +14,7 @@ from src.models.arsenal import (
 from src.services.arsenal import (
     create_and_add_ball,
     ensure_ball_catalog,
+    get_arsenal_fit_recommendations,
     get_user_arsenal,
     list_balls_catalog,
     remove_from_arsenal,
@@ -56,3 +59,8 @@ def delete_ball(arsenal_id: UUID) -> dict[str, bool]:
 def read_catalog() -> list[BallItem]:
     ensure_ball_catalog()
     return list_balls_catalog()
+
+
+@router.post("/fit", response_model=ArsenalFitResponse)
+def score_arsenal_fit(payload: ArsenalFitRequest) -> ArsenalFitResponse:
+    return get_arsenal_fit_recommendations(DEMO_USER_ID, payload)

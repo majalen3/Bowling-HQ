@@ -35,3 +35,38 @@ export type CreateAndAddBallRequest = {
   weight_lbs?: number;
   notes?: string;
 };
+
+export type ArsenalFitRequest = {
+  pattern: {
+    name?: string;
+    length_ft: number;
+    volume_ml: number;
+    asymmetry_index: number;
+    front_oil_pct: number;
+    mid_oil_pct: number;
+    backend_oil_pct: number;
+    lane_surface: string;
+  };
+  bowler: {
+    average: number;
+    speed_mph: number;
+    rev_rate: number;
+    axis_rotation_deg: number;
+    axis_tilt_deg: number;
+    consistency: number;
+  };
+  top_n: number;
+};
+
+export type ArsenalFitRecommendation = {
+  rank: number;
+  ball_id: string;
+  ball_name: string;
+  fit_score: number;
+  confidence: number;
+  reasons: string[];
+};
+
+export type ArsenalFitResponse = {
+  recommendations: ArsenalFitRecommendation[];
+};

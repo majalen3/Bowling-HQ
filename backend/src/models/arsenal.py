@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from src.models.recommendations import BowlerInput, PatternInput
+
 
 class BallCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
@@ -49,3 +51,22 @@ class AddBallToArsenalRequest(BaseModel):
 
 class CreateAndAddBallRequest(BallCreate):
     notes: Optional[str] = None
+
+
+class ArsenalFitRequest(BaseModel):
+    pattern: PatternInput
+    bowler: BowlerInput
+    top_n: int = Field(default=3, ge=1, le=10)
+
+
+class ArsenalFitRecommendation(BaseModel):
+    rank: int
+    ball_id: UUID
+    ball_name: str
+    fit_score: float
+    confidence: float
+    reasons: list[str]
+
+
+class ArsenalFitResponse(BaseModel):
+    recommendations: list[ArsenalFitRecommendation]

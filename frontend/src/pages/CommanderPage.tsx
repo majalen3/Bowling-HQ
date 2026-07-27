@@ -1,11 +1,19 @@
 import { useState } from 'react';
 
-import { getOpeningBallRecommendation } from '../services/api';
+import {
+  analyzePattern,
+  getCommanderRecommendation,
+  getOpeningBallRecommendation,
+  runBallSimulator,
+} from '../services/api';
+import type { CommanderResponse } from '../types/commander';
 import type {
   BowlerInput,
   PatternInput,
   RecommendationResponse,
 } from '../types/recommendations';
+import type { PatternAnalysisResponse } from '../types/patterns';
+import type { SimulatorResponse } from '../types/simulator';
 
 const RANK_LABELS: Record<number, string> = {
   1: 'gold',
@@ -33,13 +41,13 @@ export function CommanderPage() {
     consistency: 0.75,
   });
   const [result, setResult] = useState<RecommendationResponse | null>(null);
+  const [patternResult, setPatternResult] = useState<PatternAnalysisResponse | null>(null);
+  const [simulation, setSimulation] = useState<SimulatorResponse | null>(null);
+  const [orchestration, setOrchestration] = useState<CommanderResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updatePattern = (
-    key: keyof PatternInput,
-    value: string,
-  ): void => {
+  const updatePattern = (key: keyof PatternInput, value: string): void => {
     setPattern((prev) => ({
       ...prev,
       [key]: key === 'name' || key === 'lane_surface' ? value : Number(value),
@@ -71,13 +79,85 @@ export function CommanderPage() {
     }
   };
 
+  const onAnalyzePattern = async (): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      setPatternResult(await analyzePattern({ pattern }));
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Failed to analyze pattern',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onRunSimulation = async (): Promise<void> => {
+    if (!result?.recommendations[0]) {
+      setError('Get recommendations first to simulate the top ball.');
+      return;
+    }
+    const topBall = result.recommendations[0];
+    setIsLoading(true);
+    setError(null);
+    try {
+      setSimulation(
+        await runBallSimulator({
+          pattern,
+          bowler,
+          ball: {
+            name: topBall.ball_name,
+            coverstock: 'solid reactive',
+            rg: 2.5,
+            differential: 0.045,
+            mass_bias: 0,
+            surface_grit: 3000,
+          },
+        }),
+      );
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Failed to run simulator',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onOrchestrate = async (): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      setOrchestration(
+        await getCommanderRecommendation({
+          pattern,
+          bowler,
+          top_n: 3,
+        }),
+      );
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Failed to run commander orchestration',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <section className="stack">
       <header className="hero">
         <p className="eyebrow">Commander AI</p>
         <h1>Opening Ball Advisor</h1>
         <p className="subtext">
-          Physics-driven ball recommendations for any oil pattern.
+          Physics-driven recommendations with Ghost Bowler and simulator signals.
         </p>
       </header>
 
@@ -100,9 +180,7 @@ export function CommanderPage() {
               id="length"
               type="number"
               value={pattern.length_ft}
-              onChange={(event) =>
-                updatePattern('length_ft', event.target.value)
-              }
+              onChange={(event) => updatePattern('length_ft', event.target.value)}
             />
           </div>
           <div className="form-group">
@@ -111,61 +189,7 @@ export function CommanderPage() {
               id="volume"
               type="number"
               value={pattern.volume_ml}
-              onChange={(event) =>
-                updatePattern('volume_ml', event.target.value)
-              }
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label htmlFor="asymmetry">Asymmetry Index</label>
-          <input
-            id="asymmetry"
-            type="number"
-            step="0.01"
-            min={0}
-            max={1}
-            value={pattern.asymmetry_index}
-            onChange={(event) =>
-              updatePattern('asymmetry_index', event.target.value)
-            }
-          />
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="front">Front %</label>
-            <input
-              id="front"
-              type="number"
-              step="0.01"
-              value={pattern.front_oil_pct}
-              onChange={(event) =>
-                updatePattern('front_oil_pct', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="mid">Mid %</label>
-            <input
-              id="mid"
-              type="number"
-              step="0.01"
-              value={pattern.mid_oil_pct}
-              onChange={(event) =>
-                updatePattern('mid_oil_pct', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="back">Back %</label>
-            <input
-              id="back"
-              type="number"
-              step="0.01"
-              value={pattern.backend_oil_pct}
-              onChange={(event) =>
-                updatePattern('backend_oil_pct', event.target.value)
-              }
+              onChange={(event) => updatePattern('volume_ml', event.target.value)}
             />
           </div>
         </div>
@@ -180,9 +204,7 @@ export function CommanderPage() {
               id="average"
               type="number"
               value={bowler.average}
-              onChange={(event) =>
-                updateBowler('average', event.target.value)
-              }
+              onChange={(event) => updateBowler('average', event.target.value)}
             />
           </div>
           <div className="form-group">
@@ -191,67 +213,62 @@ export function CommanderPage() {
               id="speed"
               type="number"
               value={bowler.speed_mph}
-              onChange={(event) =>
-                updateBowler('speed_mph', event.target.value)
-              }
-            />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="revRate">Rev Rate (rpm)</label>
-            <input
-              id="revRate"
-              type="number"
-              value={bowler.rev_rate}
-              onChange={(event) =>
-                updateBowler('rev_rate', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="rotation">Axis Rotation (deg)</label>
-            <input
-              id="rotation"
-              type="number"
-              value={bowler.axis_rotation_deg}
-              onChange={(event) =>
-                updateBowler('axis_rotation_deg', event.target.value)
-              }
-            />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="tilt">Axis Tilt (deg)</label>
-            <input
-              id="tilt"
-              type="number"
-              value={bowler.axis_tilt_deg}
-              onChange={(event) =>
-                updateBowler('axis_tilt_deg', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="consistency">Consistency (0-1)</label>
-            <input
-              id="consistency"
-              type="number"
-              step="0.05"
-              min={0}
-              max={1}
-              value={bowler.consistency}
-              onChange={(event) =>
-                updateBowler('consistency', event.target.value)
-              }
+              onChange={(event) => updateBowler('speed_mph', event.target.value)}
             />
           </div>
         </div>
         <button type="button" onClick={onSubmit} disabled={isLoading}>
-          {isLoading ? 'Analyzing…' : 'Get Recommendation'}
+          {isLoading ? 'Working…' : 'Get Recommendation'}
+        </button>{' '}
+        <button type="button" onClick={onAnalyzePattern} disabled={isLoading}>
+          Analyze Pattern
+        </button>{' '}
+        <button type="button" onClick={onRunSimulation} disabled={isLoading}>
+          Run Simulator
+        </button>{' '}
+        <button type="button" onClick={onOrchestrate} disabled={isLoading}>
+          Run Commander Orchestration
         </button>
       </section>
+
+      {patternResult && (
+        <section className="card">
+          <h2>Pattern Intelligence</h2>
+          <p>
+            Difficulty: <strong>{patternResult.difficulty_score}</strong> ({patternResult.difficulty_label})
+          </p>
+          <p>Breakpoint board: {patternResult.breakpoint_board}</p>
+          <p>Transition risk: {patternResult.transition_risk}</p>
+        </section>
+      )}
+
+      {simulation && (
+        <section className="card">
+          <h2>Ball Simulator</h2>
+          <p>
+            Predicted score: <strong>{simulation.predicted_score}</strong> ({simulation.confidence_low}-
+            {simulation.confidence_high})
+          </p>
+          <p>Strike probability: {Math.round(simulation.strike_probability * 100)}%</p>
+          <p>Confidence: {Math.round(simulation.confidence * 100)}%</p>
+        </section>
+      )}
+
+      {orchestration && (
+        <section className="card">
+          <h2>Ghost Bowler</h2>
+          <p>
+            Baseline average: <strong>{orchestration.ghost_bowler.overall.average_score}</strong> (
+            {orchestration.ghost_bowler.total_games} games)
+          </p>
+          <p>Commander confidence: {Math.round(orchestration.confidence * 100)}%</p>
+          <ul>
+            {orchestration.rationale.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {result && (
         <section className="card">
@@ -259,49 +276,33 @@ export function CommanderPage() {
           <div className="stats-grid">
             <div className="stat-card">
               <span className="stat-label">Pattern Difficulty</span>
-              <span className="stat-value">
-                {result.pattern_difficulty_score}
-              </span>
-              <span className="subtext">
-                {result.pattern_difficulty_label}
-              </span>
+              <span className="stat-value">{result.pattern_difficulty_score}</span>
+              <span className="subtext">{result.pattern_difficulty_label}</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">Rule of 31 Breakpoint</span>
-              <span className="stat-value">
-                {result.breakpoint_board}
-              </span>
+              <span className="stat-value">{result.breakpoint_board}</span>
               <span className="subtext">board</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">Bowler Type</span>
-              <span className="stat-value stat-type">
-                {result.bowler_type.replace('_', ' ')}
-              </span>
+              <span className="stat-value stat-type">{result.bowler_type.replace('_', ' ')}</span>
             </div>
           </div>
 
           {result.recommendations.map((rec) => (
             <article className="ball-card" key={rec.rank}>
               <div className="ball-card-head">
-                <span
-                  className={`recommendation-rank rank-${
-                    RANK_LABELS[rec.rank] ?? 'other'
-                  }`}
-                >
+                <span className={`recommendation-rank rank-${RANK_LABELS[rec.rank] ?? 'other'}`}>
                   #{rec.rank}
                 </span>
                 <strong>{rec.ball_name}</strong>
               </div>
               <div className="fit-score-bar">
-                <div
-                  className="fit-score-fill"
-                  style={{ width: `${rec.fit_score}%` }}
-                />
+                <div className="fit-score-fill" style={{ width: `${rec.fit_score}%` }} />
               </div>
               <p className="subtext">
-                Fit {rec.fit_score}/100 · Confidence{' '}
-                {Math.round(rec.confidence * 100)}% · Strike{' '}
+                Fit {rec.fit_score}/100 · Confidence {Math.round(rec.confidence * 100)}% · Strike{' '}
                 {Math.round(rec.strike_probability * 100)}%
               </p>
               <ul>
