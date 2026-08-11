@@ -1,64 +1,48 @@
 import { useState } from 'react';
 
-import { getOpeningBallRecommendation } from '../services/api';
+import { fetchCommanderRecommendation } from '../services/api';
 import type {
-  BowlerInput,
-  PatternInput,
-  RecommendationResponse,
-} from '../types/recommendations';
+  CommanderRequestInput,
+  CommanderResponse,
+  LaneCondition,
+  ReleaseStyle,
+} from '../types/commander';
 
-const RANK_LABELS: Record<number, string> = {
-  1: 'gold',
-  2: 'silver',
-  3: 'bronze',
+const ROLE_LABEL: Record<string, string> = {
+  primary: 'Primary',
+  alternative: 'Alternative',
+  backup: 'Backup',
+};
+
+const ROLE_CLASS: Record<string, string> = {
+  primary: 'rank-gold',
+  alternative: 'rank-silver',
+  backup: 'rank-bronze',
+};
+
+const DIFFICULTY_LABELS: Record<number, string> = {
+  1: 'Easy (house shot)',
+  2: 'Medium',
+  3: 'Hard (sport)',
+  4: 'Very hard (PBA)',
 };
 
 export function CommanderPage() {
-  const [pattern, setPattern] = useState<PatternInput>({
-    name: 'House Shot',
-    length_ft: 40,
-    volume_ml: 24,
-    asymmetry_index: 0.0,
-    front_oil_pct: 0.34,
-    mid_oil_pct: 0.33,
-    backend_oil_pct: 0.33,
-    lane_surface: 'synthetic',
+  const [form, setForm] = useState<CommanderRequestInput>({
+    lane_condition: 'medium',
+    pattern_difficulty: 2,
+    ball_speed: 17,
+    release_style: 'balanced',
   });
-  const [bowler, setBowler] = useState<BowlerInput>({
-    average: 190,
-    speed_mph: 17,
-    rev_rate: 350,
-    axis_rotation_deg: 45,
-    axis_tilt_deg: 15,
-    consistency: 0.75,
-  });
-  const [result, setResult] = useState<RecommendationResponse | null>(null);
+  const [result, setResult] = useState<CommanderResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const updatePattern = (
-    key: keyof PatternInput,
-    value: string,
-  ): void => {
-    setPattern((prev) => ({
-      ...prev,
-      [key]: key === 'name' || key === 'lane_surface' ? value : Number(value),
-    }));
-  };
-
-  const updateBowler = (key: keyof BowlerInput, value: string): void => {
-    setBowler((prev) => ({ ...prev, [key]: Number(value) }));
-  };
 
   const onSubmit = async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getOpeningBallRecommendation({
-        pattern,
-        bowler,
-        top_n: 3,
-      });
+      const response = await fetchCommanderRecommendation(form);
       setResult(response);
     } catch (submitError) {
       setError(
@@ -74,243 +58,166 @@ export function CommanderPage() {
   return (
     <section className="stack">
       <header className="hero">
-        <p className="eyebrow">Commander AI</p>
-        <h1>Opening Ball Advisor</h1>
+        <p className="eyebrow">Auto Director</p>
+        <h1>Commander AI</h1>
         <p className="subtext">
-          Physics-driven ball recommendations for any oil pattern.
+          Tell Commander what you're facing and it picks the right ball from
+          your arsenal.
         </p>
       </header>
 
       {error && <p role="alert">{error}</p>}
 
       <section className="card">
-        <h2>Oil Pattern</h2>
+        <h2>Lane Conditions</h2>
+
         <div className="form-group">
-          <label htmlFor="patternName">Pattern Name</label>
-          <input
-            id="patternName"
-            value={pattern.name ?? ''}
-            onChange={(event) => updatePattern('name', event.target.value)}
-          />
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="length">Length (ft)</label>
-            <input
-              id="length"
-              type="number"
-              value={pattern.length_ft}
-              onChange={(event) =>
-                updatePattern('length_ft', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="volume">Volume (mL)</label>
-            <input
-              id="volume"
-              type="number"
-              value={pattern.volume_ml}
-              onChange={(event) =>
-                updatePattern('volume_ml', event.target.value)
-              }
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label htmlFor="asymmetry">Asymmetry Index</label>
-          <input
-            id="asymmetry"
-            type="number"
-            step="0.01"
-            min={0}
-            max={1}
-            value={pattern.asymmetry_index}
+          <label htmlFor="laneCondition">Oil Condition</label>
+          <select
+            id="laneCondition"
+            value={form.lane_condition}
             onChange={(event) =>
-              updatePattern('asymmetry_index', event.target.value)
+              setForm((prev) => ({
+                ...prev,
+                lane_condition: event.target.value as LaneCondition,
+              }))
             }
-          />
+          >
+            <option value="dry">Dry</option>
+            <option value="light">Light</option>
+            <option value="medium">Medium</option>
+            <option value="heavy">Heavy</option>
+            <option value="very_heavy">Very Heavy</option>
+          </select>
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="front">Front %</label>
-            <input
-              id="front"
-              type="number"
-              step="0.01"
-              value={pattern.front_oil_pct}
-              onChange={(event) =>
-                updatePattern('front_oil_pct', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="mid">Mid %</label>
-            <input
-              id="mid"
-              type="number"
-              step="0.01"
-              value={pattern.mid_oil_pct}
-              onChange={(event) =>
-                updatePattern('mid_oil_pct', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="back">Back %</label>
-            <input
-              id="back"
-              type="number"
-              step="0.01"
-              value={pattern.backend_oil_pct}
-              onChange={(event) =>
-                updatePattern('backend_oil_pct', event.target.value)
-              }
-            />
+
+        <div className="form-group">
+          <label htmlFor="difficulty">
+            Pattern Difficulty —{' '}
+            <span className="subtext">
+              {DIFFICULTY_LABELS[form.pattern_difficulty]}
+            </span>
+          </label>
+          <input
+            id="difficulty"
+            type="range"
+            min={1}
+            max={4}
+            step={1}
+            value={form.pattern_difficulty}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                pattern_difficulty: Number(event.target.value),
+              }))
+            }
+            className="range-input"
+          />
+          <div className="range-ticks">
+            {[1, 2, 3, 4].map((n) => (
+              <span
+                key={n}
+                className={
+                  form.pattern_difficulty === n
+                    ? 'range-tick range-tick-active'
+                    : 'range-tick'
+                }
+              >
+                {n}
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
       <section className="card">
-        <h2>Bowler Profile</h2>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="average">Average</label>
-            <input
-              id="average"
-              type="number"
-              value={bowler.average}
-              onChange={(event) =>
-                updateBowler('average', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="speed">Speed (mph)</label>
-            <input
-              id="speed"
-              type="number"
-              value={bowler.speed_mph}
-              onChange={(event) =>
-                updateBowler('speed_mph', event.target.value)
-              }
-            />
-          </div>
+        <h2>Your Game</h2>
+
+        <div className="form-group">
+          <label htmlFor="ballSpeed">Ball Speed (mph)</label>
+          <input
+            id="ballSpeed"
+            type="number"
+            min={10}
+            max={25}
+            step={0.5}
+            value={form.ball_speed}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                ball_speed: Number(event.target.value),
+              }))
+            }
+          />
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="revRate">Rev Rate (rpm)</label>
-            <input
-              id="revRate"
-              type="number"
-              value={bowler.rev_rate}
-              onChange={(event) =>
-                updateBowler('rev_rate', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="rotation">Axis Rotation (deg)</label>
-            <input
-              id="rotation"
-              type="number"
-              value={bowler.axis_rotation_deg}
-              onChange={(event) =>
-                updateBowler('axis_rotation_deg', event.target.value)
-              }
-            />
-          </div>
+
+        <div className="form-group">
+          <label htmlFor="releaseStyle">Release Style</label>
+          <select
+            id="releaseStyle"
+            value={form.release_style}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                release_style: event.target.value as ReleaseStyle,
+              }))
+            }
+          >
+            <option value="controlled">Controlled (straighter)</option>
+            <option value="balanced">Balanced (medium hook)</option>
+            <option value="power">Power (strong hook)</option>
+          </select>
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="tilt">Axis Tilt (deg)</label>
-            <input
-              id="tilt"
-              type="number"
-              value={bowler.axis_tilt_deg}
-              onChange={(event) =>
-                updateBowler('axis_tilt_deg', event.target.value)
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="consistency">Consistency (0-1)</label>
-            <input
-              id="consistency"
-              type="number"
-              step="0.05"
-              min={0}
-              max={1}
-              value={bowler.consistency}
-              onChange={(event) =>
-                updateBowler('consistency', event.target.value)
-              }
-            />
-          </div>
-        </div>
+
         <button type="button" onClick={onSubmit} disabled={isLoading}>
-          {isLoading ? 'Analyzing…' : 'Get Recommendation'}
+          {isLoading ? 'Analyzing…' : '⚡ Get Ball Recommendation'}
         </button>
       </section>
 
       {result && (
         <section className="card">
-          <h2>Recommendations</h2>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Pattern Difficulty</span>
-              <span className="stat-value">
-                {result.pattern_difficulty_score}
-              </span>
-              <span className="subtext">
-                {result.pattern_difficulty_label}
-              </span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Rule of 31 Breakpoint</span>
-              <span className="stat-value">
-                {result.breakpoint_board}
-              </span>
-              <span className="subtext">board</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Bowler Type</span>
-              <span className="stat-value stat-type">
-                {result.bowler_type.replace('_', ' ')}
-              </span>
-            </div>
-          </div>
+          <h2>
+            Recommendations{' '}
+            <span className="subtext">
+              {result.from_arsenal ? 'from your arsenal' : 'from catalog'}
+            </span>
+          </h2>
+
+          {result.recommendations.length === 0 && (
+            <p className="subtext">
+              No recommendations returned. Add balls to your arsenal and try
+              again.
+            </p>
+          )}
 
           {result.recommendations.map((rec) => (
-            <article className="ball-card" key={rec.rank}>
+            <article className="ball-card" key={rec.role}>
               <div className="ball-card-head">
                 <span
-                  className={`recommendation-rank rank-${
-                    RANK_LABELS[rec.rank] ?? 'other'
-                  }`}
+                  className={`recommendation-rank ${ROLE_CLASS[rec.role] ?? 'rank-other'}`}
                 >
-                  #{rec.rank}
+                  {ROLE_LABEL[rec.role] ?? rec.role}
                 </span>
-                <strong>{rec.ball_name}</strong>
+                <strong>{rec.ball.name}</strong>
               </div>
+              <p className="subtext">{rec.ball.brand} · {rec.ball.coverstock}</p>
               <div className="fit-score-bar">
                 <div
                   className="fit-score-fill"
-                  style={{ width: `${rec.fit_score}%` }}
+                  style={{ width: `${rec.confidence}%` }}
                 />
               </div>
-              <p className="subtext">
-                Fit {rec.fit_score}/100 · Confidence{' '}
-                {Math.round(rec.confidence * 100)}% · Strike{' '}
-                {Math.round(rec.strike_probability * 100)}%
-              </p>
-              <ul>
-                {rec.reasoning.map((reason, index) => (
-                  <li key={index}>{reason}</li>
-                ))}
-              </ul>
+              <p className="subtext">Confidence {rec.confidence}/100</p>
+              <p className="subtext">{rec.reasoning}</p>
             </article>
           ))}
+
+          {!result.from_arsenal && (
+            <p className="subtext" style={{ marginTop: '0.5rem' }}>
+              💡 Add your own balls in Arsenal to get recommendations from your
+              bag.
+            </p>
+          )}
         </section>
       )}
     </section>
