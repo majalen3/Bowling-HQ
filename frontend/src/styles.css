@@ -318,6 +318,53 @@ textarea {
   margin-bottom: 0.35rem;
 }
 
+.range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.3);
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+}
+
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(120deg, #0ea5e9, #3b82f6);
+  cursor: pointer;
+}
+
+.range-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(120deg, #0ea5e9, #3b82f6);
+  cursor: pointer;
+}
+
+.range-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.3rem;
+}
+
+.range-tick {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.range-tick-active {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

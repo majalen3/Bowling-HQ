@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   addGameFromThrows,
@@ -8,7 +8,9 @@ import {
   fetchSessionGames,
   fetchSessionProgress,
   importScores,
+  uploadSessionVideo,
 } from '../services/api';
+import type { VideoUploadResult } from '../services/api';
 import type { FramesResponse, GamesResponse } from '../types/games';
 import type { SessionProgressSnapshot } from '../types/sessionProgress';
 
@@ -31,6 +33,10 @@ export function SessionsPage() {
   const [csvText, setCsvText] = useState<Record<string, string>>({});
   const [csvSource, setCsvSource] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [videoUploadPct, setVideoUploadPct] = useState<Record<string, number>>({});
+  const [videoResult, setVideoResult] = useState<Record<string, VideoUploadResult>>({});
+  const [videoError, setVideoError] = useState<Record<string, string>>({});
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const loadGames = async (sessionId: string): Promise<void> => {
     try {
@@ -201,6 +207,30 @@ export function SessionsPage() {
 
   const getMode = (sessionId: string): 'quick' | 'throws' =>
     entryMode[sessionId] ?? 'quick';
+
+  const onUploadVideo = async (
+    sessionId: string,
+    file: File,
+  ): Promise<void> => {
+    setVideoError((prev) => ({ ...prev, [sessionId]: '' }));
+    setVideoUploadPct((prev) => ({ ...prev, [sessionId]: 0 }));
+    try {
+      const result = await uploadSessionVideo(sessionId, file, (pct) =>
+        setVideoUploadPct((prev) => ({ ...prev, [sessionId]: pct })),
+      );
+      setVideoResult((prev) => ({ ...prev, [sessionId]: result }));
+      setVideoUploadPct((prev) => ({ ...prev, [sessionId]: 100 }));
+    } catch (uploadError) {
+      setVideoError((prev) => ({
+        ...prev,
+        [sessionId]:
+          uploadError instanceof Error
+            ? uploadError.message
+            : 'Video upload failed',
+      }));
+      setVideoUploadPct((prev) => ({ ...prev, [sessionId]: 0 }));
+    }
+  };
 
   return (
     <section className="stack">
@@ -447,6 +477,46 @@ export function SessionsPage() {
                 >
                   Import
                 </button>
+
+                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                  <label>Upload Session Video</label>
+                  <p className="subtext" style={{ marginBottom: '0.4rem' }}>
+                    MP4, MOV, AVI, or WebM · max 500 MB
+                  </p>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/quicktime,video/x-msvideo,video/webm"
+                    ref={(el) => {
+                      fileInputRefs.current[session.id] = el;
+                    }}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) onUploadVideo(session.id, file);
+                    }}
+                    style={{ padding: '0.4rem 0' }}
+                  />
+                  {(videoUploadPct[session.id] ?? 0) > 0 &&
+                    !videoResult[session.id] && (
+                      <div className="fit-score-bar" style={{ marginTop: '0.4rem' }}>
+                        <div
+                          className="fit-score-fill"
+                          style={{ width: `${videoUploadPct[session.id]}%` }}
+                        />
+                      </div>
+                    )}
+                  {videoError[session.id] && (
+                    <p role="alert" style={{ marginTop: '0.3rem' }}>
+                      {videoError[session.id]}
+                    </p>
+                  )}
+                  {videoResult[session.id] && (
+                    <p className="success-note" style={{ marginTop: '0.3rem' }}>
+                      ✓ {videoResult[session.id].filename} uploaded (
+                      {(videoResult[session.id].size_bytes / 1024 / 1024).toFixed(1)}{' '}
+                      MB) — {videoResult[session.id].message}
+                    </p>
+                  )}
+                </div>
 
                 <button
                   type="button"

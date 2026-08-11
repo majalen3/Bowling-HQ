@@ -441,6 +441,56 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
   return (await response.json()) as AnalyticsSummary;
 }
 
+// --- Video Upload ---
+
+export type VideoUploadResult = {
+  session_id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  message: string;
+};
+
+export async function uploadSessionVideo(
+  sessionId: string,
+  file: File,
+  onProgress?: (pct: number) => void,
+): Promise<VideoUploadResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return new Promise<VideoUploadResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${apiConfig.baseUrl}/sessions/${sessionId}/videos`);
+
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      });
+    }
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText) as VideoUploadResult);
+      } else {
+        let detail = `Upload failed (${xhr.status})`;
+        try {
+          const body = JSON.parse(xhr.responseText) as { detail?: string };
+          if (body.detail) detail = body.detail;
+        } catch {
+          // ignore parse errors
+        }
+        reject(new Error(detail));
+      }
+    });
+
+    xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+    xhr.send(formData);
+  });
+}
+
 // --- Auth ---
 
 export async function registerUser(
